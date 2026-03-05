@@ -10,7 +10,7 @@ export const Header = () => {
             <div className="flex items-center space-x-2">
                 <Icon
                     text="D"
-                    className="w-8 h-8 bg-gradient-to-br from-primary to-purple-700 rounded-lg flex items-center justify-center text-white font-bold text-lg"
+                    size={1}
                 />
                 <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
             </div>

@@ -16,7 +16,7 @@ export function Login() {
             <div className="flex justify-center items-center min-h-[calc(100vh-70px)] p-4 bg-gray-50 dark:bg-gray-900">
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-8 w-full max-w-md shadow-lg border border-gray-100 dark:border-gray-700">
                     <div className="flex flex-col items-center mb-6">
-                        <Icon />
+                        <Icon size={2}/>
                         <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Welcome Back</h1>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Sign in to your account</p>
                     </div>
