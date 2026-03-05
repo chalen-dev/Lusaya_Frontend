@@ -1,7 +1,15 @@
 import { Helmet } from "react-helmet-async";
-import { Card } from "../components/partials/Card";
+import { Card } from "../components/partials/Card";   // corrected import
+import { useEffect } from "react";
+import { useHeaderTitle } from "../contexts/HeaderTitleContext";
 
 export function Dashboard() {
+    const { setTitle } = useHeaderTitle();
+
+    useEffect(() => {
+        setTitle('Dashboard');
+    }, [setTitle]);
+
     return (
         <>
             <Helmet>

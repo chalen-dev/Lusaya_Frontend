@@ -1,15 +1,21 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { Header } from "../components/partials/Header";
 import { Text } from "../components/input/Text";
 import {Icon} from "../components/partials/Icon.tsx";
 import {Password} from "../components/input/Password.tsx";
+import {useHeaderTitle} from "../contexts/HeaderTitleContext.tsx";
+import {APP_NAME} from "../config/constants.ts";
 
 export function Login() {
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const { setTitle } = useHeaderTitle();
 
+    useEffect(() => {
+        setTitle(APP_NAME);
+    }, [setTitle]);
     return (
         <>
             <Header />
