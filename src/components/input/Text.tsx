@@ -1,6 +1,6 @@
 import React from 'react';
 
-type TextProps = {
+type props = {
     name: string;
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -25,7 +25,7 @@ export const Text = ({
                          required,
                          className = '',
                          ...rest
-                     }: TextProps) => {
+                     }: props) => {
     const inputId = id || name;
 
     return (

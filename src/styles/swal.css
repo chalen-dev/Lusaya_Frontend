@@ -1,0 +1,138 @@
+/* Light mode variables (default) */
+:root {
+    --swal-bg: #ffffff;
+    --swal-color: #222222;
+    --swal-secondary: #666666;
+    --swal-border: #e0e0e0;
+    --swal-primary: #8b5cf6;
+    --swal-primary-hover: #7c3aed;
+    --swal-cancel-bg: #f5f5f5;
+    --swal-cancel-color: #222222;
+}
+
+/* Dark mode */
+.dark {
+    --swal-bg: #1a1a1a;
+    --swal-color: #f0f0f0;
+    --swal-secondary: #aaaaaa;
+    --swal-border: #404040;
+    --swal-primary: #8b5cf6;
+    --swal-primary-hover: #9f7aea;
+    --swal-cancel-bg: #2d2d2d;
+    --swal-cancel-color: #f0f0f0;
+}
+
+/* SweetAlert2 popup */
+.swal2-popup {
+    background: var(--swal-bg) !important;
+    color: var(--swal-color) !important;
+    border: 1px solid var(--swal-border) !important;
+    border-radius: 0.75rem !important;
+    font-family: inherit !important;
+    padding: 1.5rem !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Title */
+.swal2-title {
+    color: var(--swal-color) !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Content text */
+.swal2-html-container {
+    color: var(--swal-secondary) !important;
+    font-size: 0.95rem !important;
+}
+
+/* Confirm button */
+.swal2-confirm {
+    background-color: var(--swal-primary) !important;
+    color: white !important;
+    border-radius: 0.5rem !important;
+    padding: 0.6rem 1.2rem !important;
+    font-weight: 500 !important;
+    border: none !important;
+    transition: background-color 0.2s ease, transform 0.1s ease !important;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2) !important;
+}
+
+.swal2-confirm:hover {
+    background-color: var(--swal-primary-hover) !important;
+    transform: scale(1.02) !important;
+}
+
+.swal2-confirm:active {
+    transform: scale(0.98) !important;
+}
+
+/* Cancel button */
+.swal2-cancel {
+    background-color: var(--swal-cancel-bg) !important;
+    color: var(--swal-cancel-color) !important;
+    border-radius: 0.5rem !important;
+    padding: 0.6rem 1.2rem !important;
+    font-weight: 500 !important;
+    border: 1px solid var(--swal-border) !important;
+    transition: background-color 0.2s ease, transform 0.1s ease !important;
+}
+
+.swal2-cancel:hover {
+    background-color: var(--swal-border) !important;
+    transform: scale(1.02) !important;
+}
+
+.swal2-cancel:active {
+    transform: scale(0.98) !important;
+}
+
+/* Actions container */
+.swal2-actions {
+    gap: 0.75rem !important;
+    margin-top: 1.5rem !important;
+}
+
+/* Toast styling */
+.swal2-toast {
+    background: var(--swal-bg) !important;
+    color: var(--swal-color) !important;
+    border: 1px solid var(--swal-border) !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+    padding: 0.75rem 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    min-height: 48px;
+    padding-right: 0.75rem !important;
+}
+
+.swal2-toast .swal2-title {
+    font-size: 0.9rem !important;
+    margin: 0 !important;
+    line-height: 1.4 !important;
+}
+
+.swal2-toast .swal2-timer-progress-bar {
+    background: var(--swal-primary) !important;
+    height: 3px !important;
+}
+.swal2-toast .swal2-close {
+    margin-left: auto !important;
+    order: 999; /* ensure it's last, so it moves to the rightmost */
+}
+
+/* Icon colors (optional – keep default or adjust) */
+.swal2-success-ring {
+    border-color: #10b981 !important;
+}
+.swal2-error [class^=swal2-x-mark-line] {
+    background-color: #ef4444 !important;
+}
+.swal2-warning {
+    color: #f59e0b !important;
+}
+.swal2-info {
+    color: #3b82f6 !important;
+}

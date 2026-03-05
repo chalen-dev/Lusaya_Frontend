@@ -1,4 +1,4 @@
-type Props = {
+type props = {
     label?: string;
     value?: string;
 } & React.HTMLAttributes<HTMLDivElement>;
@@ -8,7 +8,7 @@ export function Card({
                          value = 'Value',
                          className = '',
                          ...rest
-                     }: Props) {
+                     }: props) {
     return (
         <div
             className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow ${className}`}
