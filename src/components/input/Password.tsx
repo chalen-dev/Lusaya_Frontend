@@ -9,6 +9,7 @@ type PasswordProps = {
     placeholder?: string;
     disabled?: boolean;
     required?: boolean;
+    error?: string;
     className?: string;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
@@ -21,6 +22,7 @@ export const Password = ({
                              placeholder,
                              disabled,
                              required,
+                             error,
                              className = '',
                              ...rest
                          }: PasswordProps) => {
@@ -48,7 +50,11 @@ export const Password = ({
                     placeholder={placeholder}
                     disabled={disabled}
                     required={required}
-                    className="w-full px-3 py-2 pr-10 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed"
+                    className={`w-full px-3 py-2 pr-10 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border rounded outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed ${
+                        error ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-700'
+                    }`}
+                    aria-invalid={!!error}
+                    aria-describedby={error ? `${inputId}-error` : undefined}
                     {...rest}
                 />
                 <button
@@ -61,6 +67,11 @@ export const Password = ({
                     <span className={`fa ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true" />
                 </button>
             </div>
+            {error && (
+                <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {error}
+                </p>
+            )}
         </div>
     );
 };

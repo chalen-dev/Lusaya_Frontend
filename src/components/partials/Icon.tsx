@@ -1,4 +1,4 @@
-import {APP_INITIALS} from "../../config/constants.ts";
+import {APP_INITIALS} from "../../../utils/constants.ts";
 
 type props = {
     text?: string;
