@@ -3,19 +3,12 @@ import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
 import { MenuItemCard } from "./MenuItemCard.tsx";
-import type { MenuItem } from "./menuItem.ts";
+import type { Category, EditingMenuItem, MenuItem } from "./menuTypes.ts";
 import { FetchingDetails } from "../common/loading/FetchingDetails.tsx";
-import { MenuForm } from "./MenuForm.tsx";
+import { MenuForm } from "./forms/MenuForm.tsx";
+import { MenuSearchForm } from "./forms/MenuSearchForm.tsx";
+import { MenuSelectForm } from "./forms/MenuSelectForm.tsx";
 import { showConfirmation, showToast } from '../../utils/swalHelpers';
-
-interface EditingMenuItem {
-    id: number;
-    name: string;
-    price: number;
-    code: string;
-    category_id: number;
-    description?: string;
-}
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
@@ -23,9 +16,20 @@ export function MenuList() {
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'forms' | 'search'>('forms');
+    const [activeTab, setActiveTab] = useState<'forms' | 'search' | 'select'>('forms');
     const [contentExpanded, setContentExpanded] = useState(true);
     const [editingItem, setEditingItem] = useState<EditingMenuItem | null>(null);
+
+    // Search and filter states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState<'id' | 'name' | 'price'>('id');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(new Set());
+    const [categories, setCategories] = useState<Category[]>([]);
+
+    // Selection mode states
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
         setTitle('Menu List');
@@ -33,6 +37,7 @@ export function MenuList() {
 
     useEffect(() => {
         void fetchMenuItems();
+        void fetchCategories();
     }, []);
 
     const fetchMenuItems = async () => {
@@ -52,6 +57,43 @@ export function MenuList() {
             setLoading(false);
         }
     };
+
+    const fetchCategories = async () => {
+        try {
+            const response = await api.get<Category[]>('/categories');
+            setCategories(response.data);
+        } catch (err) {
+            console.error('Failed to fetch categories', err);
+        }
+    };
+
+    const filteredMenuItems = menuItems
+        .filter(item => {
+            const term = searchTerm.toLowerCase();
+            const matchesSearch =
+                item.name.toLowerCase().includes(term) ||
+                item.code.toLowerCase().includes(term) ||
+                (item.description?.toLowerCase() || '').includes(term) ||
+                (item.category?.name?.toLowerCase() || '').includes(term);
+
+            const matchesCategory =
+                selectedCategoryIds.size === 0 ||
+                (item.category?.id && selectedCategoryIds.has(item.category.id));
+
+            return matchesSearch && matchesCategory;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'id') {
+                return sortOrder === 'asc' ? a.id - b.id : b.id - a.id;
+            } else if (sortBy === 'name') {
+                const compare = a.name.localeCompare(b.name);
+                return sortOrder === 'asc' ? compare : -compare;
+            } else { // price
+                const priceA = typeof a.price === 'string' ? parseFloat(a.price) : a.price;
+                const priceB = typeof b.price === 'string' ? parseFloat(b.price) : b.price;
+                return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
+            }
+        });
 
     const handleEdit = (item: MenuItem) => {
         setEditingItem({
@@ -105,6 +147,89 @@ export function MenuList() {
         }
     };
 
+    const handleCategoryToggle = (categoryId: number) => {
+        setSelectedCategoryIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(categoryId)) {
+                newSet.delete(categoryId);
+            } else {
+                newSet.add(categoryId);
+            }
+            return newSet;
+        });
+    };
+
+    const handleSortChange = (by: 'name' | 'price', order: 'asc' | 'desc') => {
+        setSortBy(by);
+        setSortOrder(order);
+    };
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setSortBy('id');
+        setSortOrder('asc');
+        setSelectedCategoryIds(new Set());
+    };
+
+    // Selection handlers
+    const toggleSelectionMode = () => {
+        if (selectionMode) {
+            // Turning off: clear selected
+            setSelectedIds(new Set());
+        }
+        setSelectionMode(!selectionMode);
+    };
+
+    const handleSelectAll = () => {
+        const allIds = new Set(filteredMenuItems.map(item => item.id));
+        setSelectedIds(allIds);
+    };
+
+    const handleToggleItemSelection = (id: number) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(id)) {
+                newSet.delete(id);
+            } else {
+                newSet.add(id);
+            }
+            return newSet;
+        });
+    };
+
+    const handleDeleteSelected = async () => {
+        if (selectedIds.size === 0) {
+            showToast('No items selected', 'info');
+            return;
+        }
+
+        const confirmed = await showConfirmation(
+            'Confirm Bulk Delete',
+            `Are you sure you want to delete ${selectedIds.size} item(s)?`,
+            'warning',
+            'Yes, delete'
+        );
+        if (!confirmed) return;
+
+        try {
+            // Send array of IDs to a bulk delete endpoint
+            await api.post('/menu-items/bulk-delete', { ids: Array.from(selectedIds) });
+            // Refresh list after deletion
+            await fetchMenuItems();
+            setSelectedIds(new Set());
+            setSelectionMode(false);
+            showToast(`${selectedIds.size} item(s) deleted successfully`, 'success');
+        } catch (err) {
+            let message = 'Bulk delete failed';
+            if (axios.isAxiosError(err)) {
+                message = err.response?.data?.message || err.message;
+            } else if (err instanceof Error) {
+                message = err.message;
+            }
+            alert(message);
+        }
+    };
+
     if (loading) {
         return <FetchingDetails />;
     }
@@ -112,19 +237,25 @@ export function MenuList() {
 
     return (
         <div className="menu-list-container">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8">
+            {/* Sticky form container with reduced bottom padding when collapsed */}
+            <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-0 z-10 ${
+                contentExpanded ? '' : 'pb-2'
+            }`}>
                 <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
                     <div className="flex gap-2">
                         <button
                             onClick={() => {
                                 if (activeTab === 'forms') {
-                                    // Same tab: toggle expansion
                                     setContentExpanded(!contentExpanded);
                                 } else {
-                                    // Different tab: switch and expand
                                     setActiveTab('forms');
                                     setEditingItem(null);
                                     setContentExpanded(true);
+                                    // Clear filters when switching to add item
+                                    setSearchTerm('');
+                                    setSelectedCategoryIds(new Set());
+                                    setSortBy('id');
+                                    setSortOrder('asc');
                                 }
                             }}
                             className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
@@ -139,10 +270,8 @@ export function MenuList() {
                         <button
                             onClick={() => {
                                 if (activeTab === 'search') {
-                                    // Same tab: toggle expansion
                                     setContentExpanded(!contentExpanded);
                                 } else {
-                                    // Different tab: switch and expand
                                     setActiveTab('search');
                                     setContentExpanded(true);
                                 }
@@ -154,7 +283,25 @@ export function MenuList() {
                             }`}
                         >
                             <i className="fas fa-search mr-2" />
-                            Search
+                            Search and Filter
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (activeTab === 'select') {
+                                    setContentExpanded(!contentExpanded);
+                                } else {
+                                    setActiveTab('select');
+                                    setContentExpanded(true);
+                                }
+                            }}
+                            className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
+                                activeTab === 'select'
+                                    ? 'text-primary border-b-2 border-primary'
+                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                            }`}
+                        >
+                            <i className="fas fa-check-double mr-2" />
+                            Select
                         </button>
                     </div>
 
@@ -179,22 +326,47 @@ export function MenuList() {
                 )}
 
                 {activeTab === 'search' && contentExpanded && (
-                    <div className="py-12 text-center text-gray-500 dark:text-gray-400 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
-                        <i className="fas fa-search text-4xl mb-3 opacity-50" />
-                        <p>Search form coming soon</p>
-                    </div>
+                    <MenuSearchForm
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        sortBy={sortBy}
+                        sortOrder={sortOrder}
+                        onSortChange={handleSortChange}
+                        categories={categories}
+                        selectedCategoryIds={selectedCategoryIds}
+                        onCategoryToggle={handleCategoryToggle}
+                        onReset={handleResetFilters}
+                    />
+                )}
+
+                {activeTab === 'select' && contentExpanded && (
+                    <MenuSelectForm
+                        selectionMode={selectionMode}
+                        onToggleMode={toggleSelectionMode}
+                        onSelectAll={handleSelectAll}
+                        onDeleteSelected={handleDeleteSelected}
+                        selectedCount={selectedIds.size}
+                    />
                 )}
             </div>
 
             <div className="cards-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem' }}>
-                {menuItems.map(item => (
+                {filteredMenuItems.map(item => (
                     <MenuItemCard
                         key={item.id}
                         item={item}
                         onDelete={handleDelete}
                         onEdit={handleEdit}
+                        selectionMode={selectionMode}
+                        isSelected={selectedIds.has(item.id)}
+                        onToggleSelection={handleToggleItemSelection}
                     />
                 ))}
+                {filteredMenuItems.length === 0 && (
+                    <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
+                        No items match your search/filters.
+                    </div>
+                )}
             </div>
         </div>
     );

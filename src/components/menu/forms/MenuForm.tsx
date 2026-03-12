@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import api from '../../../services/api.ts';
 import axios from 'axios';
-import { Text } from '../common/input/Text';
-import { Select } from '../common/input/Select';
-import { Number } from '../common/input/Number';
-import { TextArea } from '../common/input/TextArea';
-import { LoadingSpinner } from '../common/loading/LoadingSpinner';
-import { showConfirmation } from '../../utils/swalHelpers';
+import { Text } from '../../common/input/Text.tsx';
+import { Select } from '../../common/input/Select.tsx';
+import { Number } from '../../common/input/Number.tsx';
+import { TextArea } from '../../common/input/TextArea.tsx';
+import { LoadingSpinner } from '../../common/loading/LoadingSpinner.tsx';
+import { showConfirmation } from '../../../utils/swalHelpers.ts';
 
 interface Category {
     id: number;
@@ -97,6 +97,8 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
         setDescription(e.target.value);
         if (errors.description) setErrors(prev => ({ ...prev, description: '' }));
     };
+
+
 
     const resetForm = () => {
         setName('');
