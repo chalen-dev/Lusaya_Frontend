@@ -10,7 +10,7 @@ import { APP_NAME } from '../../utils/constants';
 import { showToast } from '../../utils/swalHelpers';
 import axios from 'axios';
 import { useState, type SyntheticEvent } from 'react';
-import {LoadingSpinner} from "../common/loading/LoadingIcon.tsx";
+import {LoadingSpinner} from "../common/loading/LoadingSpinner.tsx";
 
 export function Login() {
     const navigate = useNavigate();

@@ -1,13 +1,19 @@
-//MENUITEMCARD.TSX
-
-import type {MenuItem} from "./menuItem.ts";
+// menuItemCard.tsx
+import type { MenuItem } from "./menuItem";
+import {showToast} from "../../utils/swalHelpers.ts";
 
 interface MenuItemCardProps {
     item: MenuItem;
     onDelete: (id: number) => void;
+    onEdit: (item: MenuItem) => void;   // new prop
 }
 
-export function MenuItemCard({ item, onDelete }: MenuItemCardProps) {
+export function MenuItemCard({ item, onDelete, onEdit }: MenuItemCardProps) {
+
+    const handleEdit = () => {
+        onEdit(item);
+        showToast('Item has been placed on the edit form.', 'info');
+    };
     return (
         <div className="flex items-center w-full p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-gray-800">
             {/* ID column */}
@@ -33,7 +39,7 @@ export function MenuItemCard({ item, onDelete }: MenuItemCardProps) {
             {/* Actions column */}
             <div className="w-32 flex gap-2 justify-end">
                 <button
-                    onClick={() => alert(`Edit item ${item.id}`)}
+                    onClick={handleEdit}
                     className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                 >
                     Edit

@@ -1,4 +1,4 @@
-import {LoadingSpinner} from "./LoadingIcon.tsx";
+import {LoadingSpinner} from "./LoadingSpinner.tsx";
 import {Helmet} from "react-helmet-async";
 
 export function LoadingScreen() {
