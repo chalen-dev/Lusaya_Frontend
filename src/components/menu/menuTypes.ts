@@ -8,6 +8,9 @@ export interface MenuItem {
         id: number;
         name: string;
     } | null;
+    image_url?: string | null;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface Category {
@@ -22,4 +25,5 @@ export interface EditingMenuItem {
     code: string;
     category_id: number;
     description?: string;
+    image_url?: string | null;
 }

@@ -10,6 +10,7 @@ import { MenuSearchForm } from "./forms/MenuSearchForm.tsx";
 import { MenuSelectForm } from "./forms/MenuSelectForm.tsx";
 import { showConfirmation, showToast } from '../../utils/swalHelpers';
 import {Pagination} from "../common/Pagination.tsx";
+import {MenuItemShowModal} from "./MenuItemShowModal.tsx";
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
@@ -31,6 +32,9 @@ export function MenuList() {
     // Selection mode states
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+    // View mode states
+    const [viewingItemId, setViewingItemId] = useState<number | null>(null);
 
     // Pagination (client-side)
     const [page, setPage] = useState(1);
@@ -118,6 +122,7 @@ export function MenuList() {
             code: item.code,
             category_id: item.category?.id ?? 0,
             description: item.description,
+            image_url: item.image_url,   // <-- add this
         });
         setActiveTab('forms');
         setContentExpanded(true);
@@ -125,6 +130,10 @@ export function MenuList() {
 
     const handleCancelEdit = () => {
         setEditingItem(null);
+    };
+
+    const handleViewItem = (id: number) => {
+        setViewingItemId(id);
     };
 
     const handleItemAdded = (action: 'add' | 'update') => {
@@ -256,8 +265,7 @@ export function MenuList() {
 
     return (
         <div className="menu-list-container">
-            {/* Sticky card – same as before */}
-            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[70px] z-10 ${
+            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-10 ${
                 contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
             }`}>
                 <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
@@ -378,6 +386,7 @@ export function MenuList() {
                         item={item}
                         onDelete={handleDelete}
                         onEdit={handleEdit}
+                        onView={handleViewItem}
                         selectionMode={selectionMode}
                         isSelected={selectedIds.has(item.id)}
                         onToggleSelection={handleToggleItemSelection}
@@ -397,6 +406,13 @@ export function MenuList() {
                     totalPages={totalPages}
                     onPageChange={goToPage}
                     disabled={loading}
+                />
+            )}
+
+            {viewingItemId && (
+                <MenuItemShowModal
+                    itemId={viewingItemId}
+                    onClose={() => setViewingItemId(null)}
                 />
             )}
         </div>

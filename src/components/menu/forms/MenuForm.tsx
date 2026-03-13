@@ -5,22 +5,18 @@ import { Text } from '../../common/input/Text.tsx';
 import { Select } from '../../common/input/Select.tsx';
 import { Number } from '../../common/input/Number.tsx';
 import { TextArea } from '../../common/input/TextArea.tsx';
+import { ImageInput } from '../../common/input/ImageInput.tsx';
 import { LoadingSpinner } from '../../common/loading/LoadingSpinner.tsx';
 import { showConfirmation } from '../../../utils/swalHelpers.ts';
+import { type Category, type EditingMenuItem } from '../menuTypes.ts';
 
-interface Category {
-    id: number;
-    name: string;
-}
-
-interface EditingMenuItem {
-    id: number;
+type MenuItemPayload = {
     name: string;
     price: number;
-    code: string;
     category_id: number;
+    code: string;
     description?: string;
-}
+};
 
 interface MenuFormProps {
     onItemAdded?: (action: 'add' | 'update') => void;
@@ -37,14 +33,18 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
     const [description, setDescription] = useState('');
     const [categories, setCategories] = useState<Category[]>([]);
     const [submitting, setSubmitting] = useState(false);
-    const [showDescription, setShowDescription] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+    const [showOptional, setShowOptional] = useState(false);
+    const [imageCleared, setImageCleared] = useState(false);
 
     const [errors, setErrors] = useState({
         name: '',
         price: '',
         category: '',
         code: '',
-        description: ''
+        description: '',
+        image: ''
     });
 
     useEffect(() => {
@@ -66,16 +66,22 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
             setCode(editingItem.code);
             setCategoryId(String(editingItem.category_id));
             setDescription(editingItem.description || '');
-            setShowDescription(!!editingItem.description);
+            setExistingImageUrl(editingItem.image_url || null);
+            setSelectedFile(null);
+            setImageCleared(false);
+            setShowOptional(!!editingItem.description || !!editingItem.image_url);
         } else {
             setName('');
             setPrice('');
             setCode('');
             setCategoryId('');
             setDescription('');
-            setShowDescription(false);
+            setExistingImageUrl(null);
+            setSelectedFile(null);
+            setImageCleared(false);
+            setShowOptional(false);
         }
-        setErrors({ name: '', price: '', category: '', code: '', description: '' });
+        setErrors({ name: '', price: '', category: '', code: '', description: '', image: '' });
     }, [editingItem]);
 
     const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +104,16 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
         if (errors.description) setErrors(prev => ({ ...prev, description: '' }));
     };
 
+    const handleImageChange = (file: File | null) => {
+        setSelectedFile(file);
+        if (errors.image) setErrors(prev => ({ ...prev, image: '' }));
 
+        if (file === null && existingImageUrl) {
+            setImageCleared(true);
+        } else {
+            setImageCleared(false);
+        }
+    };
 
     const resetForm = () => {
         setName('');
@@ -106,8 +121,11 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
         setCode('');
         setCategoryId('');
         setDescription('');
-        setShowDescription(false);
-        setErrors({ name: '', price: '', category: '', code: '', description: '' });
+        setSelectedFile(null);
+        setExistingImageUrl(null);
+        setImageCleared(false);
+        setShowOptional(false);
+        setErrors({ name: '', price: '', category: '', code: '', description: '', image: '' });
     };
 
     const handleCancel = () => {
@@ -123,7 +141,8 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
             price: price.trim() ? '' : 'Price is required',
             category: categoryId ? '' : 'Category is required',
             code: code.trim() ? '' : 'Code is required',
-            description: ''
+            description: '',
+            image: ''
         };
         setErrors(newErrors);
         if (newErrors.name || newErrors.price || newErrors.category || newErrors.code) return;
@@ -141,18 +160,45 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
         setSubmitting(true);
 
         try {
-            const payload = {
+            const basePayload: MenuItemPayload = {
                 name,
                 price: parseFloat(price),
                 category_id: parseInt(categoryId),
                 code,
-                description
+                description: description || undefined
             };
 
             if (editingItem) {
-                await api.put(`/menu-items/${editingItem.id}`, payload);
+                if (selectedFile) {
+                    const formData = new FormData();
+                    formData.append('_method', 'PUT');
+                    Object.entries(basePayload).forEach(([key, value]) => {
+                        if (value !== undefined) formData.append(key, String(value));
+                    });
+                    formData.append('photo', selectedFile);
+                    await api.post(`/menu-items/${editingItem.id}`, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                } else {
+                    const payload = {
+                        ...basePayload,
+                        ...(imageCleared ? { photo: null } : {})
+                    };
+                    await api.put(`/menu-items/${editingItem.id}`, payload);
+                }
             } else {
-                await api.post('/menu-items', payload);
+                if (selectedFile) {
+                    const formData = new FormData();
+                    Object.entries(basePayload).forEach(([key, value]) => {
+                        if (value !== undefined) formData.append(key, String(value));
+                    });
+                    formData.append('photo', selectedFile);
+                    await api.post('/menu-items', formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' }
+                    });
+                } else {
+                    await api.post('/menu-items', basePayload);
+                }
             }
 
             resetForm();
@@ -161,10 +207,24 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
             let message = editingItem ? 'Failed to update menu item' : 'Failed to add menu item';
             if (axios.isAxiosError(err)) {
                 message = err.response?.data?.message || err.message;
+                if (err.response?.data?.errors) {
+                    const backendErrors = err.response.data.errors;
+                    setErrors(prev => ({
+                        ...prev,
+                        name: backendErrors.name?.[0] || '',
+                        price: backendErrors.price?.[0] || '',
+                        category: backendErrors.category_id?.[0] || '',
+                        code: backendErrors.code?.[0] || '',
+                        description: backendErrors.description?.[0] || '',
+                        image: backendErrors.image?.[0] || ''
+                    }));
+                }
             } else if (err instanceof Error) {
                 message = err.message;
             }
-            alert(message);
+            if (!axios.isAxiosError(err) || !err.response?.data?.errors) {
+                alert(message);
+            }
         } finally {
             setSubmitting(false);
         }
@@ -218,32 +278,38 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
                 />
             </div>
 
-            <div className="mb-6">
-                <div className="flex justify-start">
-                    <button
-                        type="button"
-                        onClick={() => setShowDescription(!showDescription)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                    >
-                        <i className={`fas fa-${showDescription ? 'minus' : 'plus'} text-primary`} />
-                        {showDescription ? 'Remove description' : 'Add description'}
-                    </button>
-                </div>
-
-                {showDescription && (
-                    <div className="mt-4">
-                        <TextArea
-                            name="description"
-                            label="Description"
-                            value={description}
-                            onChange={handleDescriptionChange}
-                            error={errors.description}
-                            rows={3}
-                            className="mb-0"
-                        />
-                    </div>
-                )}
+            <div className="flex justify-start mb-6">
+                <button
+                    type="button"
+                    onClick={() => setShowOptional(!showOptional)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                >
+                    <i className={`fas fa-${showOptional ? 'minus' : 'plus'} text-primary`} />
+                    {showOptional ? 'Remove optional details' : 'Add image & description'}
+                </button>
             </div>
+
+            {showOptional && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <ImageInput
+                        name="image"
+                        label="Item Image"
+                        onChange={handleImageChange}
+                        currentImageUrl={existingImageUrl}
+                        error={errors.image}
+                        disabled={submitting}
+                    />
+                    <TextArea
+                        name="description"
+                        label="Description"
+                        value={description}
+                        onChange={handleDescriptionChange}
+                        error={errors.description}
+                        rows={4}
+                        className="mb-0"
+                    />
+                </div>
+            )}
 
             <div className="flex justify-end items-center gap-10">
                 <button
