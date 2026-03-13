@@ -1,5 +1,4 @@
-// MenuList.tsx (updated with header)
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
@@ -12,11 +11,13 @@ import { MenuActionForm } from "./forms/MenuActionForm.tsx";
 import { showConfirmation, showToast } from '../../utils/swalHelpers';
 import { Pagination } from "../common/Pagination.tsx";
 import { MenuItemShowModal } from "./partials/MenuItemShowModal.tsx";
-import {TabBar} from "../common/TabBar.tsx";
-import {type Column, TableHeader} from "../common/TableHeader.tsx";
+import { TabBar } from "../common/TabBar.tsx";
+import { type Column, TableHeader } from "../common/TableHeader.tsx";
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
+    const tabBarRef = useRef<HTMLDivElement>(null);
+    const [headerTopOffset, setHeaderTopOffset] = useState(160);
 
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -50,6 +51,22 @@ export function MenuList() {
     useEffect(() => {
         void fetchMenuItems();
         void fetchCategories();
+    }, []);
+
+    // Use ResizeObserver to keep header positioned exactly below the tab bar
+    useEffect(() => {
+        if (!tabBarRef.current) return;
+
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const height = entry.contentRect.height;
+                setHeaderTopOffset(50 + height);
+            }
+        });
+
+        observer.observe(tabBarRef.current);
+
+        return () => observer.disconnect();
     }, []);
 
     const fetchMenuItems = async () => {
@@ -273,9 +290,12 @@ export function MenuList() {
 
     return (
         <div className="menu-list-container">
-            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-10 ${
-                contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
-            }`}>
+            <div
+                ref={tabBarRef}
+                className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-20 ${
+                    contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
+                }`}
+            >
                 <TabBar
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
@@ -286,7 +306,6 @@ export function MenuList() {
                     searchLabel="Search and Filter"
                     selectLabel="Actions"
                     onFormsTabSelected={() => {
-                        // Reset filters when switching to forms tab (as in original)
                         setEditingItem(null);
                         setSearchTerm('');
                         setSelectedCategoryIds(new Set());
@@ -336,7 +355,8 @@ export function MenuList() {
                 <TableHeader
                     columns={menuColumns}
                     selectionMode={selectionMode}
-                    className="sticky top-[160px] z-10"
+                    className="sticky z-10"
+                    style={{ top: `${headerTopOffset}px` }}
                 />
             )}
 

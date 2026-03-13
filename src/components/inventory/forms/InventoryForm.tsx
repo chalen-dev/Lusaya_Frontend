@@ -1,23 +1,14 @@
-// InventoryForm.tsx (cleaned)
+// InventoryForm.tsx
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import axios from 'axios';
-import { DateInput } from '../../common/input/DateInput.tsx';
+import { DateInput } from '../../common/input/DateInput';
 import { Number } from '../../common/input/Number';
 import { TextArea } from '../../common/input/TextArea';
-import { Select } from '../../common/input/Select';
 import { LoadingSpinner } from '../../common/loading/LoadingSpinner';
 import { showConfirmation } from '../../../utils/swalHelpers';
 import type { InventoryLog, MenuItem } from '../inventoryTypes';
 import { SearchableSelect } from "../../common/input/SearchableSelect";
-
-// Status options derived from backend enum
-const INVENTORY_STATUSES = [
-    { value: 'in_stock', label: 'In Stock' },
-    { value: 'low_stock', label: 'Low Stock' },
-    { value: 'out_of_stock', label: 'Out of Stock' },
-    { value: 'expired', label: 'Expired' },
-];
 
 interface InventoryFormProps {
     onItemAdded?: (action: 'add' | 'update') => void;
@@ -39,26 +30,25 @@ export function InventoryForm({
     // Form fields
     const [itemId, setItemId] = useState<number | null>(null);
     const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
-    const [quantity, setQuantity] = useState<string>(''); // store as string for input
+    const [quantity, setQuantity] = useState<string>('');
     const [dateAcquired, setDateAcquired] = useState<string>('');
     const [expiryDate, setExpiryDate] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [isAvailable, setIsAvailable] = useState<boolean>(false);
-    const [inventoryStatus, setInventoryStatus] = useState<string>('in_stock');
+    const [inventoryStatus, setInventoryStatus] = useState<string>('in_stock'); // still used for backend
 
     const [searchTerm, setSearchTerm] = useState<string>('');
 
-    // UI state
     const [submitting, setSubmitting] = useState<boolean>(false);
     const [errors, setErrors] = useState({
         item_id: '',
         quantity: '',
         date_acquired: '',
         expiry_date: '',
-        inventory_status: '',
         is_available: '',
         description: '',
     });
+
     // Populate form when editing
     useEffect(() => {
         if (editingItem) {
@@ -93,7 +83,6 @@ export function InventoryForm({
             quantity: '',
             date_acquired: '',
             expiry_date: '',
-            inventory_status: '',
             is_available: '',
             description: '',
         });
@@ -107,24 +96,20 @@ export function InventoryForm({
     const handleSubmit = async (e: React.SyntheticEvent) => {
         e.preventDefault();
 
-        // Validate required fields
         const newErrors = {
             item_id: itemId ? '' : 'Please select a menu item',
             quantity: quantity.trim() ? '' : 'Quantity is required',
             date_acquired: dateAcquired ? '' : 'Date acquired is required',
             expiry_date: expiryDate ? '' : 'Expiry date is required',
-            inventory_status: inventoryStatus ? '' : 'Status is required',
             is_available: '',
             description: '',
         };
 
-        // Numeric validation
         const quantityNum = parseFloat(quantity);
         if (quantity && (isNaN(quantityNum) || quantityNum < 0)) {
             newErrors.quantity = 'Quantity must be a positive number';
         }
 
-        // Date comparison (only if both dates are provided)
         if (dateAcquired && expiryDate) {
             const acquired = new Date(dateAcquired);
             const expiry = new Date(expiryDate);
@@ -178,7 +163,6 @@ export function InventoryForm({
                         quantity: backendErrors.quantity_in_stock?.[0] || '',
                         date_acquired: backendErrors.date_acquired?.[0] || '',
                         expiry_date: backendErrors.expiry_date?.[0] || '',
-                        inventory_status: backendErrors.inventory_status?.[0] || '',
                         is_available: backendErrors.is_available?.[0] || '',
                         description: backendErrors.description?.[0] || '',
                     }));
@@ -231,7 +215,8 @@ export function InventoryForm({
                 className="mb-3"
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            {/* Three‑column row: Quantity, Acquired, Expires */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <Number
                     label="Quantity"
                     name="quantity"
@@ -242,18 +227,6 @@ export function InventoryForm({
                     error={errors.quantity}
                     required
                 />
-                <Select
-                    label="Status"
-                    name="inventory_status"
-                    value={inventoryStatus}
-                    onChange={(e) => setInventoryStatus(e.target.value)}
-                    options={INVENTORY_STATUSES}
-                    error={errors.inventory_status}
-                    required
-                />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                 <DateInput
                     label="Acquired"
                     name="date_acquired"
@@ -282,14 +255,14 @@ export function InventoryForm({
                 className="mb-3"
             />
 
-            <div className="flex justify-end items-center gap-3">
+            <div className="flex justify-end items-center gap-10">
                 <button
                     type="button"
                     onClick={handleCancel}
                     disabled={submitting}
                     className="px-4 py-2 bg-gray-500 text-white font-medium text-sm rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                 >
-                    Cancel
+                    {editingItem ? 'Cancel' : 'Clear'}
                 </button>
                 <button
                     type="submit"
@@ -298,9 +271,9 @@ export function InventoryForm({
                 >
                     {submitting ? (
                         <span className="flex items-center gap-2">
-                        <LoadingSpinner size={16} />
+                            <LoadingSpinner size={16} />
                             {editingItem ? 'Updating...' : 'Adding...'}
-                    </span>
+                        </span>
                     ) : (
                         editingItem ? 'Update' : 'Add'
                     )}

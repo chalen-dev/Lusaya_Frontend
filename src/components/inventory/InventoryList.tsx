@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
@@ -8,11 +8,11 @@ import { InventorySearchForm } from "./forms/InventorySearchForm";
 import { InventoryActionForm } from "./forms/InventoryActionForm.tsx";
 import { InventoryShowModal } from "./partials/InventoryShowModal";
 import { FetchingDetails } from "../common/loading/FetchingDetails";
-import { Pagination } from "../common/Pagination"; // import Pagination
+import { Pagination } from "../common/Pagination";
 import { showToast, showConfirmation } from '../../utils/swalHelpers';
 import type { InventoryLog, MenuItem } from "./inventoryTypes";
-import {TabBar} from "../common/TabBar.tsx";
-import {type Column, TableHeader} from "../common/TableHeader.tsx";
+import { TabBar } from "../common/TabBar.tsx";
+import { type Column, TableHeader } from "../common/TableHeader.tsx";
 
 // Types for sort and filter
 type SortField = 'name' | 'quantity' | 'date_acquired' | 'expiry_date';
@@ -21,12 +21,14 @@ type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 
 export function InventoryList() {
     const { setTitle } = useHeaderTitle();
+    const tabBarRef = useRef<HTMLDivElement>(null);
 
     const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
     const [menuItemsLoading, setMenuItemsLoading] = useState(false);
+    const [headerTopOffset, setHeaderTopOffset] = useState(160);
 
     // UI state for sticky top bar
     const [activeTab, setActiveTab] = useState<'forms' | 'search' | 'select'>('forms');
@@ -58,6 +60,22 @@ export function InventoryList() {
     useEffect(() => {
         fetchInventoryLogs();
         fetchMenuItems();
+    }, []);
+
+    // Use ResizeObserver to keep header positioned exactly below the tab bar
+    useEffect(() => {
+        if (!tabBarRef.current) return;
+
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                const height = entry.contentRect.height;
+                setHeaderTopOffset(50 + height);
+            }
+        });
+
+        observer.observe(tabBarRef.current);
+
+        return () => observer.disconnect();
     }, []);
 
     // Filtered and sorted logs
@@ -379,6 +397,39 @@ export function InventoryList() {
         }
     };
 
+    const handleUpdateQuantity = async (id: number, newQuantity: number) => {
+        try {
+            // Optimistic update
+            setInventoryLogs(prev =>
+                prev.map(log =>
+                    log.id === id ? { ...log, quantity_in_stock: newQuantity } : log
+                )
+            );
+
+            await api.patch(`/inventory-logs/${id}/quantity`, {
+                quantity_in_stock: newQuantity
+            });
+
+            showToast('Quantity updated successfully', 'success');
+        } catch (err) {
+            // Revert on error
+            setInventoryLogs(prev =>
+                prev.map(log =>
+                    log.id === id ? { ...log, quantity_in_stock: inventoryLogs.find(l => l.id === id)!.quantity_in_stock } : log
+                )
+            );
+
+            let message = 'Failed to update quantity';
+            if (axios.isAxiosError(err)) {
+                message = err.response?.data?.message || err.message;
+            } else if (err instanceof Error) {
+                message = err.message;
+            }
+            showToast(message, 'error');
+            throw err;
+        }
+    };
+
     const goToPage = (newPage: number) => {
         setPage(newPage);
     };
@@ -400,15 +451,18 @@ export function InventoryList() {
         { key: 'expires', label: 'Expires', width: 'w-28', align: 'center' },
         { key: 'status', label: 'Status', width: 'w-24', align: 'center' },
         { key: 'avail', label: 'Avail.', width: 'w-20', align: 'center' },
-        { key: 'actions', label: 'Actions', width: 'w-32', align: 'right' },
+        { key: 'actions', label: 'Actions', width: 'w-36', align: 'right' },
     ];
 
     return (
         <div className="inventory-list-container">
             {/* Sticky top bar with tabs */}
-            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-10 ${
-                contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
-            }`}>
+            <div
+                ref={tabBarRef}
+                className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-20 ${
+                    contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
+                }`}
+            >
                 <TabBar
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
@@ -419,7 +473,6 @@ export function InventoryList() {
                     searchLabel="Search and Filter"
                     selectLabel="Actions"
                     onFormsTabSelected={() => {
-                        // Optional: reset any filters if needed (inventory doesn't reset filters on forms tab)
                         setEditingLog(null);
                     }}
                 />
@@ -470,7 +523,8 @@ export function InventoryList() {
                 <TableHeader
                     columns={inventoryColumns}
                     selectionMode={selectionMode}
-                    className="sticky top-[160px] z-10"
+                    className="sticky z-10"
+                    style={{ top: `${headerTopOffset}px` }}
                 />
             )}
 
@@ -487,6 +541,7 @@ export function InventoryList() {
                         selectionMode={selectionMode}
                         isSelected={selectedIds.has(log.id)}
                         onToggleSelection={handleToggleItemSelection}
+                        onUpdateQuantity={handleUpdateQuantity}
                     />
                 ))}
                 {filteredLogs.length === 0 && !loading && (

@@ -1,4 +1,4 @@
-// components/common/input/Date.tsx
+// components/common/input/DateInput.tsx
 import React from 'react';
 import { Text } from './Text';
 
@@ -18,19 +18,19 @@ interface DateProps {
 }
 
 export const DateInput: React.FC<DateProps> = ({
-                                              name,
-                                              value,
-                                              onChange,
-                                              id,
-                                              label = 'Date',
-                                              disabled,
-                                              required,
-                                              error,
-                                              className,
-                                              inputClassName,
-                                              min,
-                                              max,
-                                          }) => {
+                                                   name,
+                                                   value,
+                                                   onChange,
+                                                   id,
+                                                   label = 'Date',
+                                                   disabled,
+                                                   required,
+                                                   error,
+                                                   className,
+                                                   inputClassName = 'dark:[&::-webkit-calendar-picker-indicator]:invert', // default dark mode fix
+                                                   min,
+                                                   max,
+                                               }) => {
     return (
         <Text
             type="date"

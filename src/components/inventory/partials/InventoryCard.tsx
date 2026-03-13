@@ -1,6 +1,6 @@
-// InventoryCard.tsx
 import type { InventoryLog } from "../inventoryTypes";
 import { showToast } from "../../../utils/swalHelpers";
+import { useState, useEffect } from 'react';
 
 interface InventoryCardProps {
     log: InventoryLog;
@@ -8,6 +8,7 @@ interface InventoryCardProps {
     onEdit: (log: InventoryLog) => void;
     onView: (id: number) => void;
     onToggleAvailability?: (id: number, currentAvailability: boolean) => void;
+    onUpdateQuantity?: (id: number, newQuantity: number) => Promise<void>;
     selectionMode?: boolean;
     isSelected?: boolean;
     onToggleSelection?: (id: number) => void;
@@ -19,10 +20,22 @@ export function InventoryCard({
                                   onEdit,
                                   onView,
                                   onToggleAvailability,
+                                  onUpdateQuantity,
                                   selectionMode = false,
                                   isSelected = false,
                                   onToggleSelection
                               }: InventoryCardProps) {
+    const [isEditingQty, setIsEditingQty] = useState(false);
+    const [editedQuantity, setEditedQuantity] = useState(log.quantity_in_stock);
+
+    // Exit edit mode if selection mode becomes active
+    useEffect(() => {
+        if (selectionMode) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setIsEditingQty(false);
+        }
+    }, [selectionMode]);
+
     const handleEdit = () => {
         if (selectionMode) return;
         onEdit(log);
@@ -48,6 +61,7 @@ export function InventoryCard({
     };
 
     const handleCardClick = () => {
+        if (isEditingQty) return;
         if (selectionMode) {
             if (onToggleSelection) {
                 onToggleSelection(log.id);
@@ -55,6 +69,44 @@ export function InventoryCard({
         } else {
             onView(log.id);
         }
+    };
+
+    const handleQtyEditClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (selectionMode) return;
+        setIsEditingQty(true);
+        setEditedQuantity(log.quantity_in_stock);
+    };
+
+    const handleIncrement = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditedQuantity(prev => prev + 1);
+    };
+
+    const handleDecrement = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditedQuantity(prev => Math.max(0, prev - 1));
+    };
+
+    const handleSaveQuantity = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!onUpdateQuantity || editedQuantity === log.quantity_in_stock) {
+            setIsEditingQty(false);
+            return;
+        }
+
+        try {
+            await onUpdateQuantity(log.id, editedQuantity);
+            setIsEditingQty(false);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (_error) {
+            // Error toast is handled in parent
+        }
+    };
+
+    const handleCancelEdit = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsEditingQty(false);
     };
 
     const selectedStyles = selectionMode && isSelected
@@ -66,7 +118,6 @@ export function InventoryCard({
         return new Date(dateString).toLocaleDateString();
     };
 
-    // Status badge now purely based on quantity and expiry – no longer affected by is_available
     const getStatusBadge = () => {
         if (log.inventory_status === 'expired' || (log.expiry_date && new Date(log.expiry_date) < new Date())) {
             return <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">Expired</span>;
@@ -120,9 +171,29 @@ export function InventoryCard({
                 {formatPrice(log.menu_item?.price)}
             </div>
 
-            {/* Quantity */}
+            {/* Quantity - editable in edit mode */}
             <div className="w-16 text-gray-600 dark:text-gray-300 text-center">
-                {log.quantity_in_stock}
+                {isEditingQty ? (
+                    <div className="flex items-center justify-center gap-1">
+                        <button
+                            onClick={handleDecrement}
+                            disabled={selectionMode}
+                            className="w-5 h-5 flex items-center justify-center bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded text-xs font-bold disabled:opacity-50"
+                        >
+                            -
+                        </button>
+                        <span className="w-8 text-sm font-medium">{editedQuantity}</span>
+                        <button
+                            onClick={handleIncrement}
+                            disabled={selectionMode}
+                            className="w-5 h-5 flex items-center justify-center bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 text-white rounded text-xs font-bold disabled:opacity-50"
+                        >
+                            +
+                        </button>
+                    </div>
+                ) : (
+                    log.quantity_in_stock
+                )}
             </div>
 
             {/* Date Acquired */}
@@ -135,7 +206,7 @@ export function InventoryCard({
                 {formatDate(log.expiry_date)}
             </div>
 
-            {/* Status Badge (independent of availability) */}
+            {/* Status Badge */}
             <div className="w-24 flex justify-center">
                 {getStatusBadge()}
             </div>
@@ -156,35 +227,55 @@ export function InventoryCard({
             </div>
 
             {/* Actions */}
-            <div className="w-32 flex gap-2 justify-end">
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit();
-                    }}
-                    disabled={selectionMode}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                        selectionMode
-                            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                    }`}
-                >
-                    Edit
-                </button>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete();
-                    }}
-                    disabled={selectionMode}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                        selectionMode
-                            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                            : 'bg-red-500 text-white hover:bg-red-600'
-                    }`}
-                >
-                    Delete
-                </button>
+            <div className="w-36 flex gap-1 justify-end">
+                {isEditingQty ? (
+                    <>
+                        <button
+                            onClick={handleSaveQuantity}
+                            disabled={selectionMode}
+                            className="px-2 py-1 text-xs font-medium bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Save
+                        </button>
+                        <button
+                            onClick={handleCancelEdit}
+                            disabled={selectionMode}
+                            className="px-2 py-1 text-xs font-medium bg-gray-500 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Cancel
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit();
+                            }}
+                            disabled={selectionMode}
+                            className="px-2 py-1 text-xs font-medium bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Edit
+                        </button>
+                        <button
+                            onClick={handleQtyEditClick}
+                            disabled={selectionMode}
+                            className="px-2 py-1 text-xs font-medium bg-purple-500 text-white rounded hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Qty
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete();
+                            }}
+                            disabled={selectionMode}
+                            className="px-2 py-1 text-xs font-medium bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Delete
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );

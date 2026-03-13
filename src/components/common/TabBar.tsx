@@ -7,11 +7,11 @@ interface TabBarProps {
     onTabChange: (tab: TabType) => void;
     contentExpanded: boolean;
     onToggleExpand: () => void;
-    isEditing?: boolean; // true if editing an item (shows pen icon instead of plus)
+    isEditing?: boolean;
     formsLabel?: string;
     searchLabel?: string;
     selectLabel?: string;
-    onFormsTabSelected?: () => void; // extra callback when forms tab is clicked (e.g., reset filters)
+    onFormsTabSelected?: () => void;
 }
 
 export function TabBar({
@@ -26,31 +26,34 @@ export function TabBar({
                            onFormsTabSelected,
                        }: TabBarProps) {
     const handleFormsClick = () => {
-        if (activeTab === 'forms') {
+        if (contentExpanded && activeTab === 'forms') {
             onToggleExpand();
         } else {
+            if (!contentExpanded) onToggleExpand();
             onTabChange('forms');
-            if (onFormsTabSelected) {
-                onFormsTabSelected();
-            }
+            onFormsTabSelected?.();
         }
     };
 
     const handleSearchClick = () => {
-        if (activeTab === 'search') {
+        if (contentExpanded && activeTab === 'search') {
             onToggleExpand();
         } else {
+            if (!contentExpanded) onToggleExpand();
             onTabChange('search');
         }
     };
 
     const handleSelectClick = () => {
-        if (activeTab === 'select') {
+        if (contentExpanded && activeTab === 'select') {
             onToggleExpand();
         } else {
+            if (!contentExpanded) onToggleExpand();
             onTabChange('select');
         }
     };
+
+    const isActive = (tab: TabType) => contentExpanded && activeTab === tab;
 
     return (
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
@@ -59,7 +62,7 @@ export function TabBar({
                 <button
                     onClick={handleFormsClick}
                     className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
-                        activeTab === 'forms'
+                        isActive('forms')
                             ? 'text-primary border-b-2 border-primary'
                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                     }`}
@@ -72,7 +75,7 @@ export function TabBar({
                 <button
                     onClick={handleSearchClick}
                     className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
-                        activeTab === 'search'
+                        isActive('search')
                             ? 'text-primary border-b-2 border-primary'
                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                     }`}
@@ -85,7 +88,7 @@ export function TabBar({
                 <button
                     onClick={handleSelectClick}
                     className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
-                        activeTab === 'select'
+                        isActive('select')
                             ? 'text-primary border-b-2 border-primary'
                             : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                     }`}
@@ -95,11 +98,11 @@ export function TabBar({
                 </button>
             </div>
 
-            {/* Expand/Collapse Button */}
+            {/* Expand/Collapse Button - Now MUCH wider */}
             <button
                 type="button"
                 onClick={onToggleExpand}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                className="flex items-center justify-center gap-2 px-8 py-2 min-w-[120px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
                 aria-label={contentExpanded ? 'Hide forms' : 'Show forms'}
             >
                 <i className={`fas fa-${contentExpanded ? 'eye-slash' : 'eye'} mr-1`} />
