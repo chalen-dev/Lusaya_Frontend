@@ -8,10 +8,12 @@ import type { Category, EditingMenuItem, MenuItem } from "./menuTypes.ts";
 import { FetchingDetails } from "../common/loading/FetchingDetails.tsx";
 import { MenuForm } from "./forms/MenuForm.tsx";
 import { MenuSearchForm } from "./forms/MenuSearchForm.tsx";
-import { MenuSelectForm } from "./forms/MenuSelectForm.tsx";
+import { MenuActionForm } from "./forms/MenuActionForm.tsx";
 import { showConfirmation, showToast } from '../../utils/swalHelpers';
 import { Pagination } from "../common/Pagination.tsx";
 import { MenuItemShowModal } from "./partials/MenuItemShowModal.tsx";
+import {TabBar} from "../common/TabBar.tsx";
+import {type Column, TableHeader} from "../common/TableHeader.tsx";
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
@@ -20,7 +22,7 @@ export function MenuList() {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'forms' | 'search' | 'select'>('forms');
-    const [contentExpanded, setContentExpanded] = useState(true);
+    const [contentExpanded, setContentExpanded] = useState(false);
     const [editingItem, setEditingItem] = useState<EditingMenuItem | null>(null);
 
     // Search and filter states
@@ -261,84 +263,37 @@ export function MenuList() {
     }
     if (error) return <div>Error: {error}</div>;
 
+    const menuColumns: Column[] = [
+        { key: 'id', label: 'ID', width: selectionMode ? 'w-20' : 'w-16' },
+        { key: 'name', label: 'Item Name', width: 'flex-1' },
+        { key: 'category', label: 'Category', width: 'w-32' },
+        { key: 'price', label: 'Price', width: 'w-24', align: 'right' },
+        { key: 'actions', label: 'Actions', width: 'w-32', align: 'right' },
+    ];
+
     return (
         <div className="menu-list-container">
             <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-10 ${
                 contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
             }`}>
-                <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => {
-                                if (activeTab === 'forms') {
-                                    setContentExpanded(!contentExpanded);
-                                } else {
-                                    setActiveTab('forms');
-                                    setEditingItem(null);
-                                    setContentExpanded(true);
-                                    setSearchTerm('');
-                                    setSelectedCategoryIds(new Set());
-                                    setSortBy('id');
-                                    setSortOrder('asc');
-                                }
-                            }}
-                            className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
-                                activeTab === 'forms'
-                                    ? 'text-primary border-b-2 border-primary'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                            }`}
-                        >
-                            <i className={`fas fa-${editingItem ? 'pen' : 'plus-circle'} mr-2`} />
-                            {editingItem ? 'Edit Item' : 'Add Item'}
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (activeTab === 'search') {
-                                    setContentExpanded(!contentExpanded);
-                                } else {
-                                    setActiveTab('search');
-                                    setContentExpanded(true);
-                                }
-                            }}
-                            className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
-                                activeTab === 'search'
-                                    ? 'text-primary border-b-2 border-primary'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                            }`}
-                        >
-                            <i className="fas fa-search mr-2" />
-                            Search and Filter
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (activeTab === 'select') {
-                                    setContentExpanded(!contentExpanded);
-                                } else {
-                                    setActiveTab('select');
-                                    setContentExpanded(true);
-                                }
-                            }}
-                            className={`px-4 py-2 font-medium text-sm rounded-t-lg transition-colors ${
-                                activeTab === 'select'
-                                    ? 'text-primary border-b-2 border-primary'
-                                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                            }`}
-                        >
-                            <i className="fas fa-check-double mr-2" />
-                            Select
-                        </button>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => setContentExpanded(!contentExpanded)}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                        aria-label={contentExpanded ? 'Hide forms' : 'Show forms'}
-                    >
-                        <i className={`fas fa-${contentExpanded ? 'eye-slash' : 'eye'} mr-1`} />
-                        {contentExpanded ? 'Hide' : 'Show'}
-                    </button>
-                </div>
+                <TabBar
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                    contentExpanded={contentExpanded}
+                    onToggleExpand={() => setContentExpanded(!contentExpanded)}
+                    isEditing={!!editingItem}
+                    formsLabel={editingItem ? 'Edit Item' : 'Add Item'}
+                    searchLabel="Search and Filter"
+                    selectLabel="Actions"
+                    onFormsTabSelected={() => {
+                        // Reset filters when switching to forms tab (as in original)
+                        setEditingItem(null);
+                        setSearchTerm('');
+                        setSelectedCategoryIds(new Set());
+                        setSortBy('id');
+                        setSortOrder('asc');
+                    }}
+                />
 
                 {contentExpanded && (
                     <>
@@ -364,7 +319,7 @@ export function MenuList() {
                             />
                         )}
                         {activeTab === 'select' && (
-                            <MenuSelectForm
+                            <MenuActionForm
                                 selectionMode={selectionMode}
                                 onToggleMode={toggleSelectionMode}
                                 onSelectAll={handleSelectAll}
@@ -378,25 +333,11 @@ export function MenuList() {
 
             {/* Table Header */}
             {menuItems.length > 0 && (
-                <div className="flex items-center w-full p-4 mb-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    {/* Checkbox spacer (only when selectionMode is active) */}
-                    {selectionMode && <div className="w-10" />}
-
-                    {/* ID column */}
-                    <div className={selectionMode ? 'w-20' : 'w-16'}>ID</div>
-
-                    {/* Name column */}
-                    <div className="flex-1">Item Name</div>
-
-                    {/* Category column */}
-                    <div className="w-32">Category</div>
-
-                    {/* Price column */}
-                    <div className="w-24">Price</div>
-
-                    {/* Actions column */}
-                    <div className="w-32 text-right">Actions</div>
-                </div>
+                <TableHeader
+                    columns={menuColumns}
+                    selectionMode={selectionMode}
+                    className="sticky top-[160px] z-10"
+                />
             )}
 
             {/* Menu items grid */}

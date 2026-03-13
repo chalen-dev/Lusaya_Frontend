@@ -10,7 +10,8 @@ type PasswordProps = {
     disabled?: boolean;
     required?: boolean;
     error?: string;
-    className?: string;
+    className?: string;          // container margin
+    inputClassName?: string;      // input padding
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
 export const Password = ({
@@ -24,6 +25,7 @@ export const Password = ({
                              required,
                              error,
                              className = '',
+                             inputClassName = 'px-3 py-2 pr-10',
                              ...rest
                          }: PasswordProps) => {
     const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,7 @@ export const Password = ({
     };
 
     return (
-        <div className={`mb-5 ${className}`}>
+        <div className={className}>
             {label && (
                 <label htmlFor={inputId} className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                     {label}
@@ -50,7 +52,7 @@ export const Password = ({
                     placeholder={placeholder}
                     disabled={disabled}
                     required={required}
-                    className={`w-full px-3 py-2 pr-10 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border rounded outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed ${
+                    className={`w-full ${inputClassName} bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border rounded outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 disabled:cursor-not-allowed ${
                         error ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-700'
                     }`}
                     aria-invalid={!!error}
