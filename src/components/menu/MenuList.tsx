@@ -9,6 +9,7 @@ import { MenuForm } from "./forms/MenuForm.tsx";
 import { MenuSearchForm } from "./forms/MenuSearchForm.tsx";
 import { MenuSelectForm } from "./forms/MenuSelectForm.tsx";
 import { showConfirmation, showToast } from '../../utils/swalHelpers';
+import {Pagination} from "../common/Pagination.tsx";
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
@@ -30,6 +31,10 @@ export function MenuList() {
     // Selection mode states
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+    // Pagination (client-side)
+    const [page, setPage] = useState(1);
+    const perPage = 25;
 
     useEffect(() => {
         setTitle('Menu List');
@@ -67,6 +72,7 @@ export function MenuList() {
         }
     };
 
+    // Filtering and sorting (client-side)
     const filteredMenuItems = menuItems
         .filter(item => {
             const term = searchTerm.toLowerCase();
@@ -94,6 +100,15 @@ export function MenuList() {
                 return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
             }
         });
+
+    // Reset page when filters change
+    useEffect(() => {
+        setPage(1);
+    }, [searchTerm, selectedCategoryIds, sortBy, sortOrder]);
+
+    // Paginated items
+    const totalPages = Math.ceil(filteredMenuItems.length / perPage);
+    const paginatedItems = filteredMenuItems.slice((page - 1) * perPage, page * perPage);
 
     const handleEdit = (item: MenuItem) => {
         setEditingItem({
@@ -174,14 +189,15 @@ export function MenuList() {
     // Selection handlers
     const toggleSelectionMode = () => {
         if (selectionMode) {
-            // Turning off: clear selected
             setSelectedIds(new Set());
         }
         setSelectionMode(!selectionMode);
     };
 
     const handleSelectAll = () => {
-        const allIds = new Set(filteredMenuItems.map(item => item.id));
+        // Select all currently visible (paginated) items? Or all filtered items?
+        // Let's select all items on the current page for practicality.
+        const allIds = new Set(paginatedItems.map(item => item.id));
         setSelectedIds(allIds);
     };
 
@@ -212,7 +228,6 @@ export function MenuList() {
         if (!confirmed) return;
 
         try {
-            // Send array of IDs to a bulk delete endpoint
             await api.post('/menu-items/bulk-delete', { ids: Array.from(selectedIds) });
             // Refresh list after deletion
             await fetchMenuItems();
@@ -230,16 +245,20 @@ export function MenuList() {
         }
     };
 
-    if (loading) {
+    const goToPage = (newPage: number) => {
+        setPage(newPage);
+    };
+
+    if (loading && menuItems.length === 0) {
         return <FetchingDetails />;
     }
     if (error) return <div>Error: {error}</div>;
 
     return (
         <div className="menu-list-container">
-            {/* Sticky form container with reduced bottom padding when collapsed */}
-            <div className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-0 z-10 ${
-                contentExpanded ? '' : 'pb-2'
+            {/* Sticky card – same as before */}
+            <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[70px] z-10 ${
+                contentExpanded ? 'p-6' : 'pt-6 px-6 pb-2'
             }`}>
                 <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
                     <div className="flex gap-2">
@@ -251,7 +270,6 @@ export function MenuList() {
                                     setActiveTab('forms');
                                     setEditingItem(null);
                                     setContentExpanded(true);
-                                    // Clear filters when switching to add item
                                     setSearchTerm('');
                                     setSelectedCategoryIds(new Set());
                                     setSortBy('id');
@@ -308,50 +326,53 @@ export function MenuList() {
                     <button
                         type="button"
                         onClick={() => setContentExpanded(!contentExpanded)}
-                        className="flex items-center gap-5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                        aria-label={contentExpanded ? 'Hide content' : 'Show content'}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                        aria-label={contentExpanded ? 'Hide forms' : 'Show forms'}
                     >
+                        <i className={`fas fa-${contentExpanded ? 'eye-slash' : 'eye'} mr-1`} />
                         {contentExpanded ? 'Hide' : 'Show'}
-                        <i className={`fas fa-chevron-${contentExpanded ? 'up' : 'down'} text-primary`} />
                     </button>
                 </div>
 
-                {activeTab === 'forms' && contentExpanded && (
-                    <MenuForm
-                        onItemAdded={handleItemAdded}
-                        onCancel={handleCancelEdit}
-                        noCard={true}
-                        editingItem={editingItem}
-                    />
-                )}
-
-                {activeTab === 'search' && contentExpanded && (
-                    <MenuSearchForm
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        sortBy={sortBy}
-                        sortOrder={sortOrder}
-                        onSortChange={handleSortChange}
-                        categories={categories}
-                        selectedCategoryIds={selectedCategoryIds}
-                        onCategoryToggle={handleCategoryToggle}
-                        onReset={handleResetFilters}
-                    />
-                )}
-
-                {activeTab === 'select' && contentExpanded && (
-                    <MenuSelectForm
-                        selectionMode={selectionMode}
-                        onToggleMode={toggleSelectionMode}
-                        onSelectAll={handleSelectAll}
-                        onDeleteSelected={handleDeleteSelected}
-                        selectedCount={selectedIds.size}
-                    />
+                {contentExpanded && (
+                    <>
+                        {activeTab === 'forms' && (
+                            <MenuForm
+                                onItemAdded={handleItemAdded}
+                                onCancel={handleCancelEdit}
+                                noCard={true}
+                                editingItem={editingItem}
+                            />
+                        )}
+                        {activeTab === 'search' && (
+                            <MenuSearchForm
+                                searchTerm={searchTerm}
+                                onSearchChange={setSearchTerm}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder}
+                                onSortChange={handleSortChange}
+                                categories={categories}
+                                selectedCategoryIds={selectedCategoryIds}
+                                onCategoryToggle={handleCategoryToggle}
+                                onReset={handleResetFilters}
+                            />
+                        )}
+                        {activeTab === 'select' && (
+                            <MenuSelectForm
+                                selectionMode={selectionMode}
+                                onToggleMode={toggleSelectionMode}
+                                onSelectAll={handleSelectAll}
+                                onDeleteSelected={handleDeleteSelected}
+                                selectedCount={selectedIds.size}
+                            />
+                        )}
+                    </>
                 )}
             </div>
 
+            {/* Menu items grid – using paginated items */}
             <div className="cards-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem' }}>
-                {filteredMenuItems.map(item => (
+                {paginatedItems.map(item => (
                     <MenuItemCard
                         key={item.id}
                         item={item}
@@ -362,12 +383,22 @@ export function MenuList() {
                         onToggleSelection={handleToggleItemSelection}
                     />
                 ))}
-                {filteredMenuItems.length === 0 && (
+                {paginatedItems.length === 0 && !loading && (
                     <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
                         No items match your search/filters.
                     </div>
                 )}
             </div>
+
+            {/* Pagination controls */}
+            {totalPages > 1 && (
+                <Pagination
+                    currentPage={page}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    disabled={loading}
+                />
+            )}
         </div>
     );
 }

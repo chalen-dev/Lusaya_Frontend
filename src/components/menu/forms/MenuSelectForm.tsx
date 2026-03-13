@@ -16,12 +16,12 @@ export function MenuSelectForm({
     return (
         <div className="p-4 space-y-4">
             <div className="flex gap-4 items-center">
-                {/* Select Mode Toggle */}
+                {/* Select Mode Toggle - more distinct when active */}
                 <button
                     onClick={onToggleMode}
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                         selectionMode
-                            ? 'bg-primary text-white'
+                            ? 'bg-purple-600 text-white hover:bg-purple-700'  // purple for active mode
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                 >
