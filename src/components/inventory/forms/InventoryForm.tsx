@@ -5,10 +5,11 @@ import axios from 'axios';
 import { DateInput } from '../../common/input/DateInput';
 import { Number } from '../../common/input/Number';
 import { TextArea } from '../../common/input/TextArea';
-import { LoadingSpinner } from '../../common/loading/LoadingSpinner';
 import { showConfirmation } from '../../../utils/swalHelpers';
 import type { InventoryLog, MenuItem } from '../inventoryTypes';
 import { SearchableSelect } from "../../common/input/SearchableSelect";
+import {CancelButton} from "../../common/forms_main/CancelButton.tsx";
+import {SubmitButton} from "../../common/forms_main/SubmitButton.tsx";
 
 interface InventoryFormProps {
     onItemAdded?: (action: 'add' | 'update') => void;
@@ -256,28 +257,21 @@ export function InventoryForm({
             />
 
             <div className="flex justify-end items-center gap-10">
-                <button
-                    type="button"
+                <CancelButton
                     onClick={handleCancel}
                     disabled={submitting}
-                    className="px-4 py-2 bg-gray-500 text-white font-medium text-sm rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                >
-                    {editingItem ? 'Cancel' : 'Clear'}
-                </button>
-                <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 bg-primary text-white font-medium text-sm rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                >
-                    {submitting ? (
-                        <span className="flex items-center gap-2">
-                            <LoadingSpinner size={16} />
-                            {editingItem ? 'Updating...' : 'Adding...'}
-                        </span>
-                    ) : (
-                        editingItem ? 'Update' : 'Add'
-                    )}
-                </button>
+                    label={editingItem ? 'Cancel' : 'Clear'}
+                    className="px-4 py-2 text-sm"
+                />
+                <SubmitButton
+                    submitting={submitting}
+                    isEditing={!!editingItem}
+                    addLabel="Add"
+                    updateLabel="Update"
+                    submittingAddLabel="Adding..."
+                    submittingUpdateLabel="Updating..."
+                    className="px-4 py-2 text-sm"
+                />
             </div>
         </>
     );

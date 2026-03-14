@@ -6,6 +6,9 @@ import {
     type ArchiveFilter,
     STATUS_OPTIONS,
 } from '../inventoryTypes';
+import {SearchHeader} from "../../common/forms_search_filter/SearchHeader.tsx";
+import {FilterButton} from "../../common/forms_search_filter/FilterButton.tsx";
+import {ResetButton} from "../../common/forms_search_filter/ResetButton.tsx";
 
 interface InventorySearchFormProps {
     searchTerm: string;
@@ -45,155 +48,104 @@ export function InventorySearchForm({
 
     return (
         <div className="p-4 space-y-4">
-            <div className="flex gap-2">
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
-                    placeholder="Search by menu item name or code..."
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    autoFocus
-                />
-                <button
-                    type="button"
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                    title={showAdvanced ? 'Hide advanced filters' : 'Show advanced filters'}
-                >
-                    <i className={`fas fa-${showAdvanced ? 'chevron-up' : 'sliders-h'}`} />
-                </button>
-            </div>
+            <SearchHeader
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search by menu item name or code..."
+                showAdvanced={showAdvanced}
+                onToggleAdvanced={() => setShowAdvanced(!showAdvanced)}
+            />
 
             {showAdvanced && (
                 <>
                     {/* Status filter */}
                     <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Filter by status:
-                        </span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                Filter by status:
+            </span>
                         <div className="flex flex-wrap gap-2">
-                            {STATUS_OPTIONS.map(status => {
-                                const isSelected = selectedStatuses.has(status.value);
-                                return (
-                                    <button
-                                        key={status.value}
-                                        onClick={() => onStatusToggle(status.value)}
-                                        className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                            isSelected
-                                                ? 'bg-primary text-white'
-                                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                        }`}
-                                    >
-                                        {status.label}
-                                    </button>
-                                );
-                            })}
+                            {STATUS_OPTIONS.map(status => (
+                                <FilterButton
+                                    key={status.value}
+                                    isSelected={selectedStatuses.has(status.value)}
+                                    onClick={() => onStatusToggle(status.value)}
+                                >
+                                    {status.label}
+                                </FilterButton>
+                            ))}
                         </div>
                     </div>
 
                     {/* Availability filter */}
                     <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Availability:
-                        </span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                Availability:
+            </span>
                         <div className="flex gap-2">
                             {(['all', 'available', 'unavailable'] as AvailabilityFilter[]).map(filter => (
-                                <button
+                                <FilterButton
                                     key={filter}
+                                    isSelected={availabilityFilter === filter}
                                     onClick={() => onAvailabilityChange(filter)}
-                                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                        availabilityFilter === filter
-                                            ? 'bg-primary text-white'
-                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                    }`}
                                 >
                                     {filter === 'all' ? 'All' : filter === 'available' ? 'Available' : 'Unavailable'}
-                                </button>
+                                </FilterButton>
                             ))}
                         </div>
                     </div>
 
                     {/* Archive filter */}
                     <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Archive status:
-                        </span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                Archive status:
+            </span>
                         <div className="flex gap-2">
                             {(['unarchived', 'archived', 'all'] as ArchiveFilter[]).map(filter => (
-                                <button
+                                <FilterButton
                                     key={filter}
+                                    isSelected={archiveFilter === filter}
                                     onClick={() => onArchiveChange(filter)}
-                                    className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                        archiveFilter === filter
-                                            ? 'bg-primary text-white'
-                                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                    }`}
                                 >
                                     {filter === 'unarchived' ? 'Unarchived' : filter === 'archived' ? 'Archived' : 'All'}
-                                </button>
+                                </FilterButton>
                             ))}
                         </div>
                     </div>
 
                     {/* Sort controls */}
                     <div>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Sort by:
-                        </span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
+                Sort by:
+            </span>
                         <div className="flex flex-wrap gap-2">
-                            <button
+                            <FilterButton
+                                isSelected={sortBy === 'name'}
                                 onClick={() => handleSort('name')}
-                                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                    sortBy === 'name'
-                                        ? 'bg-primary text-white'
-                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                }`}
                             >
                                 Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-                            </button>
-                            <button
+                            </FilterButton>
+                            <FilterButton
+                                isSelected={sortBy === 'quantity'}
                                 onClick={() => handleSort('quantity')}
-                                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                    sortBy === 'quantity'
-                                        ? 'bg-primary text-white'
-                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                }`}
                             >
                                 Quantity {sortBy === 'quantity' && (sortOrder === 'asc' ? '↑' : '↓')}
-                            </button>
-                            <button
+                            </FilterButton>
+                            <FilterButton
+                                isSelected={sortBy === 'date_acquired'}
                                 onClick={() => handleSort('date_acquired')}
-                                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                    sortBy === 'date_acquired'
-                                        ? 'bg-primary text-white'
-                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                }`}
                             >
                                 Date Acquired {sortBy === 'date_acquired' && (sortOrder === 'asc' ? '↑' : '↓')}
-                            </button>
-                            <button
+                            </FilterButton>
+                            <FilterButton
+                                isSelected={sortBy === 'expiry_date'}
                                 onClick={() => handleSort('expiry_date')}
-                                className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                                    sortBy === 'expiry_date'
-                                        ? 'bg-primary text-white'
-                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                }`}
                             >
                                 Expiry Date {sortBy === 'expiry_date' && (sortOrder === 'asc' ? '↑' : '↓')}
-                            </button>
+                            </FilterButton>
                         </div>
                     </div>
 
-                    {/* Reset button */}
-                    <div className="flex justify-end">
-                        <button
-                            onClick={onReset}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                        >
-                            <i className="fas fa-undo" />
-                            Reset Filters
-                        </button>
-                    </div>
+                    <ResetButton onClick={onReset} />
                 </>
             )}
         </div>

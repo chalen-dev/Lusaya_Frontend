@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import api from '../../../services/api.ts';
 import axios from 'axios';
 import { type MenuItem } from '../menuTypes.ts';
-import { LoadingSpinner } from '../../common/loading/LoadingSpinner.tsx';
+import { LoadingSpinner } from '../../common/loading/LoadingSpinner';
+import { DetailGrid } from "../../common/show_modal/DetailGrid.tsx";
+import { DetailCard } from "../../common/show_modal/DetailCard.tsx";
 
 interface MenuItemShowModalProps {
     itemId: number | null;
@@ -78,55 +80,34 @@ export function MenuItemShowModal({ itemId, onClose }: MenuItemShowModalProps) {
 
                     {item && !loading && !error && (
                         <div className="space-y-4">
-                            {/* Main row: details left, image right */}
                             <div className="flex flex-col md:flex-row gap-4">
                                 {/* Left side - details */}
                                 <div className="flex-1 space-y-3">
-                                    {/* Four fields in a grid */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">ID</p>
-                                            <p className="text-base font-mono font-semibold text-gray-900 dark:text-white">#{item.id}</p>
-                                        </div>
+                                    <DetailGrid cols={2}>
+                                        <DetailCard label="ID" value={`#${item.id}`} />
+                                        <DetailCard label="Code" value={item.code} />
+                                    </DetailGrid>
 
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Code</p>
-                                            <p className="text-base font-mono font-semibold text-gray-900 dark:text-white">{item.code}</p>
-                                        </div>
+                                    <DetailGrid cols={2}>
+                                        <DetailCard label="Category" value={item.category?.name || 'Uncategorized'} />
+                                        <DetailCard label="Price" value={`₱${Number(item.price).toFixed(2)}`} />
+                                    </DetailGrid>
 
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Category</p>
-                                            <p className="text-base font-medium text-gray-900 dark:text-white">
-                                                {item.category?.name || 'Uncategorized'}
-                                            </p>
-                                        </div>
+                                    <DetailCard label="Name" value={item.name} />
 
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Price</p>
-                                            <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                                ₱{Number(item.price).toFixed(2)}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Name - full width */}
-                                    <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                        <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Name</p>
-                                        <p className="text-base font-semibold text-gray-900 dark:text-white">{item.name}</p>
-                                    </div>
-
-                                    {/* Description - full width */}
                                     {item.description && (
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                                {item.description}
-                                            </p>
-                                        </div>
+                                        <DetailCard
+                                            label="Description"
+                                            value={
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                                    {item.description}
+                                                </p>
+                                            }
+                                        />
                                     )}
                                 </div>
 
-                                {/* Right side - image (only if exists) */}
+                                {/* Right side - image */}
                                 {item.image_url && (
                                     <div className="md:w-64 flex-shrink-0">
                                         <div className="sticky top-0">

@@ -1,9 +1,12 @@
-// InventoryShowModal.tsx
 import { useEffect, useState } from 'react';
 import api from '../../../services/api';
 import axios from 'axios';
 import { type InventoryLog } from '../inventoryTypes';
 import { LoadingSpinner } from '../../common/loading/LoadingSpinner';
+import {DetailGrid} from "../../common/show_modal/DetailGrid.tsx";
+import {DetailCard} from "../../common/show_modal/DetailCard.tsx";
+import {StatusBadge} from "../../common/show_modal/StatusBadge.tsx";
+
 
 interface InventoryShowModalProps {
     logId: number | null;
@@ -41,18 +44,6 @@ export function InventoryShowModal({ logId, onClose }: InventoryShowModalProps) 
     const formatDate = (dateString: string | null) => {
         if (!dateString) return '—';
         return new Date(dateString).toLocaleDateString();
-    };
-
-    const getStatusBadge = (status: string | null) => {
-        const statusMap: Record<string, { color: string; label: string }> = {
-            in_stock: { color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', label: 'In Stock' },
-            low_stock: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', label: 'Low Stock' },
-            out_of_stock: { color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', label: 'Out of Stock' },
-            expired: { color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', label: 'Expired' },
-        };
-        const defaultStatus = { color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', label: status || 'Unknown' };
-        const { color, label } = statusMap[status || ''] || defaultStatus;
-        return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${color}`}>{label}</span>;
     };
 
     return (
@@ -99,80 +90,57 @@ export function InventoryShowModal({ logId, onClose }: InventoryShowModalProps) 
                             <div className="flex flex-col md:flex-row gap-4">
                                 {/* Left side - inventory details */}
                                 <div className="flex-1 space-y-3">
-                                    {/* First row: ID and basic info */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">ID</p>
-                                            <p className="text-base font-mono font-semibold text-gray-900 dark:text-white">#{log.id}</p>
-                                        </div>
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Menu Item</p>
-                                            <p className="text-base font-medium text-gray-900 dark:text-white">
-                                                {log.menu_item?.name || 'Unknown'}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <DetailGrid cols={2}>
+                                        <DetailCard label="ID" value={`#${log.id}`} />
+                                        <DetailCard label="Menu Item" value={log.menu_item?.name || 'Unknown'} />
+                                    </DetailGrid>
 
-                                    {/* Menu item code and price (if available) */}
                                     {log.menu_item && (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                                <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Code</p>
-                                                <p className="text-base font-mono text-gray-900 dark:text-white">{log.menu_item.code || '—'}</p>
-                                            </div>
-                                            <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                                <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Price</p>
-                                                <p className="text-lg font-bold text-gray-900 dark:text-white">
-                                                    ₱{Number(log.menu_item.price).toFixed(2)}
-                                                </p>
-                                            </div>
-                                        </div>
+                                        <DetailGrid cols={2}>
+                                            <DetailCard label="Code" value={log.menu_item.code || '—'} />
+                                            <DetailCard label="Price" value={`₱${Number(log.menu_item.price).toFixed(2)}`} />
+                                        </DetailGrid>
                                     )}
 
-                                    {/* Inventory-specific fields */}
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Quantity</p>
-                                            <p className="text-base font-semibold text-gray-900 dark:text-white">{log.quantity_in_stock}</p>
-                                        </div>
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Status</p>
-                                            <div className="mt-1">{getStatusBadge(log.inventory_status)}</div>
-                                        </div>
-                                    </div>
+                                    <DetailGrid cols={2}>
+                                        <DetailCard label="Quantity" value={log.quantity_in_stock} />
+                                        <DetailCard
+                                            label="Status"
+                                            value={<StatusBadge status={log.inventory_status || 'unknown'} />}
+                                        />
+                                    </DetailGrid>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Date Acquired</p>
-                                            <p className="text-base text-gray-900 dark:text-white">{formatDate(log.date_acquired)}</p>
-                                        </div>
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Expiry Date</p>
-                                            <p className="text-base text-gray-900 dark:text-white">{formatDate(log.expiry_date)}</p>
-                                        </div>
-                                    </div>
+                                    <DetailGrid cols={2}>
+                                        <DetailCard label="Date Acquired" value={formatDate(log.date_acquired)} />
+                                        <DetailCard label="Expiry Date" value={formatDate(log.expiry_date)} />
+                                    </DetailGrid>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-0.5">Availability</p>
-                                            <p className={`text-base font-medium ${log.is_available ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                                                {log.is_available ? 'Available' : 'Unavailable'}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <DetailCard
+                                        label="Availability"
+                                        value={
+                                            log.is_archived ? (
+                                                <span className="text-gray-500 dark:text-gray-400">Archived</span>
+                                            ) : (
+                                                <span className={log.is_available ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'}>
+                                                    {log.is_available ? 'Available' : 'Unavailable'}
+                                                </span>
+                                            )
+                                        }
+                                    />
 
-                                    {/* Description */}
                                     {log.description && (
-                                        <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                            <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Description</p>
-                                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                                {log.description}
-                                            </p>
-                                        </div>
+                                        <DetailCard
+                                            label="Description"
+                                            value={
+                                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                                    {log.description}
+                                                </p>
+                                            }
+                                        />
                                     )}
                                 </div>
 
-                                {/* Right side - menu item image (if exists) */}
+                                {/* Right side - menu item image */}
                                 {log.menu_item?.image_url && (
                                     <div className="md:w-64 flex-shrink-0">
                                         <div className="sticky top-0">

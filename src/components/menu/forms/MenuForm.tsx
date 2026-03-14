@@ -6,9 +6,10 @@ import { Select } from '../../common/input/Select.tsx';
 import { Number } from '../../common/input/Number.tsx';
 import { TextArea } from '../../common/input/TextArea.tsx';
 import { ImageInput } from '../../common/input/ImageInput.tsx';
-import { LoadingSpinner } from '../../common/loading/LoadingSpinner.tsx';
 import { showConfirmation } from '../../../utils/swalHelpers.ts';
 import { type Category, type EditingMenuItem } from '../menuTypes.ts';
+import {CancelButton} from "../../common/forms_main/CancelButton.tsx";
+import {SubmitButton} from "../../common/forms_main/SubmitButton.tsx";
 
 type MenuItemPayload = {
     name: string;
@@ -312,28 +313,17 @@ export function MenuForm({ onItemAdded, onCancel, noCard = false, editingItem }:
             )}
 
             <div className="flex justify-end items-center gap-10">
-                <button
-                    type="button"
+                <CancelButton
                     onClick={handleCancel}
                     disabled={submitting}
-                    className="px-6 py-2.5 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                >
-                    {editingItem ? 'Cancel' : 'Clear'}
-                </button>
-                <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                >
-                    {submitting ? (
-                        <span className="flex items-center gap-2">
-                            <LoadingSpinner size={20} />
-                            {editingItem ? 'Updating...' : 'Adding...'}
-                        </span>
-                    ) : (
-                        editingItem ? 'Update Item' : 'Add Item'
-                    )}
-                </button>
+                    label={editingItem ? 'Cancel' : 'Clear'}
+                />
+                <SubmitButton
+                    submitting={submitting}
+                    isEditing={!!editingItem}
+                    addLabel="Add Item"
+                    updateLabel="Update Item"
+                />
             </div>
         </>
     );
