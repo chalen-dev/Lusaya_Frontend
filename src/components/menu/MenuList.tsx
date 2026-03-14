@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
@@ -16,12 +17,32 @@ import { type Column, TableHeader } from "../common/TableHeader.tsx";
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
+    const queryClient = useQueryClient();
+
+    const {
+        data: menuItems = [],
+        isLoading,
+        error: queryError
+    } = useQuery({
+        queryKey: ['menu-items'],
+        queryFn: async () => {
+            const response = await api.get<MenuItem[]>('/menu-items');
+            return response.data;
+        },
+    });
+
+    const {
+        data: categories = []
+    } = useQuery({
+        queryKey: ['categories'],
+        queryFn: async () => {
+            const response = await api.get<Category[]>('/categories');
+            return response.data;
+        },
+    });
+
     const tabBarRef = useRef<HTMLDivElement>(null);
     const [headerTopOffset, setHeaderTopOffset] = useState(160);
-
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'forms' | 'search' | 'select'>('forms');
     const [contentExpanded, setContentExpanded] = useState(false);
     const [editingItem, setEditingItem] = useState<EditingMenuItem | null>(null);
@@ -31,7 +52,6 @@ export function MenuList() {
     const [sortBy, setSortBy] = useState<'id' | 'name' | 'price'>('id');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
     const [selectedCategoryIds, setSelectedCategoryIds] = useState<Set<number>>(new Set());
-    const [categories, setCategories] = useState<Category[]>([]);
 
     // Selection mode states
     const [selectionMode, setSelectionMode] = useState(false);
@@ -48,53 +68,17 @@ export function MenuList() {
         setTitle('Menu List');
     }, [setTitle]);
 
-    useEffect(() => {
-        void fetchMenuItems();
-        void fetchCategories();
-    }, []);
-
-    // Use ResizeObserver to keep header positioned exactly below the tab bar
+    // ResizeObserver for sticky header
     useEffect(() => {
         if (!tabBarRef.current) return;
-
         const observer = new ResizeObserver(entries => {
             for (const entry of entries) {
-                const height = entry.contentRect.height;
-                setHeaderTopOffset(50 + height);
+                setHeaderTopOffset(50 + entry.contentRect.height);
             }
         });
-
         observer.observe(tabBarRef.current);
-
         return () => observer.disconnect();
     }, []);
-
-    const fetchMenuItems = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get<MenuItem[]>('/menu-items');
-            setMenuItems(response.data);
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message || 'Failed to fetch menu items');
-            } else if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('An unknown error occurred');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCategories = async () => {
-        try {
-            const response = await api.get<Category[]>('/categories');
-            setCategories(response.data);
-        } catch (err) {
-            console.error('Failed to fetch categories', err);
-        }
-    };
 
     // Filtering and sorting (client-side)
     const filteredMenuItems = menuItems
@@ -105,11 +89,9 @@ export function MenuList() {
                 item.code.toLowerCase().includes(term) ||
                 (item.description?.toLowerCase() || '').includes(term) ||
                 (item.category?.name?.toLowerCase() || '').includes(term);
-
             const matchesCategory =
                 selectedCategoryIds.size === 0 ||
                 (item.category?.id && selectedCategoryIds.has(item.category.id));
-
             return matchesSearch && matchesCategory;
         })
         .sort((a, b) => {
@@ -118,7 +100,7 @@ export function MenuList() {
             } else if (sortBy === 'name') {
                 const compare = a.name.localeCompare(b.name);
                 return sortOrder === 'asc' ? compare : -compare;
-            } else { // price
+            } else {
                 const priceA = typeof a.price === 'string' ? parseFloat(a.price) : a.price;
                 const priceB = typeof b.price === 'string' ? parseFloat(b.price) : b.price;
                 return sortOrder === 'asc' ? priceA - priceB : priceB - priceA;
@@ -127,13 +109,45 @@ export function MenuList() {
 
     // Reset page when filters change
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPage(1);
     }, [searchTerm, selectedCategoryIds, sortBy, sortOrder]);
 
-    // Paginated items
     const totalPages = Math.ceil(filteredMenuItems.length / perPage);
     const paginatedItems = filteredMenuItems.slice((page - 1) * perPage, page * perPage);
 
+    // Mutations
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => api.delete(`/menu-items/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+            showToast('Item deleted successfully', 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Delete failed';
+            showToast(message, 'error');
+        },
+    });
+
+    const bulkDeleteMutation = useMutation({
+        mutationFn: (ids: number[]) => api.post('/menu-items/bulk-delete', { ids }),
+        onSuccess: (_, ids) => {
+            queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+            setSelectedIds(new Set());
+            setSelectionMode(false);
+            showToast(`${ids.length} item(s) deleted successfully`, 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Bulk delete failed';
+            showToast(message, 'error');
+        },
+    });
+
+    // Handlers
     const handleEdit = (item: MenuItem) => {
         setEditingItem({
             id: item.id,
@@ -148,22 +162,13 @@ export function MenuList() {
         setContentExpanded(true);
     };
 
-    const handleCancelEdit = () => {
-        setEditingItem(null);
-    };
+    const handleCancelEdit = () => setEditingItem(null);
 
-    const handleViewItem = (id: number) => {
-        setViewingItemId(id);
-    };
+    const handleViewItem = (id: number) => setViewingItemId(id);
 
     const handleItemAdded = (action: 'add' | 'update') => {
-        fetchMenuItems().then(() => {
-            if (action === 'add') {
-                showToast('Item added successfully', 'success');
-            } else {
-                showToast('Item updated successfully', 'success');
-            }
-        });
+        queryClient.invalidateQueries({ queryKey: ['menu-items'] });
+        showToast(action === 'add' ? 'Item added successfully' : 'Item updated successfully', 'success');
         setEditingItem(null);
     };
 
@@ -175,30 +180,14 @@ export function MenuList() {
             'Yes, delete'
         );
         if (!confirmed) return;
-
-        try {
-            await api.delete(`/menu-items/${id}`);
-            setMenuItems(prev => prev.filter(item => item.id !== id));
-            showToast('Item deleted successfully', 'success');
-        } catch (err) {
-            let message = 'Delete failed';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            alert(message);
-        }
+        deleteMutation.mutate(id);
     };
 
     const handleCategoryToggle = (categoryId: number) => {
         setSelectedCategoryIds(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(categoryId)) {
-                newSet.delete(categoryId);
-            } else {
-                newSet.add(categoryId);
-            }
+            if (newSet.has(categoryId)) newSet.delete(categoryId);
+            else newSet.add(categoryId);
             return newSet;
         });
     };
@@ -217,25 +206,17 @@ export function MenuList() {
 
     // Selection handlers
     const toggleSelectionMode = () => {
-        if (selectionMode) {
-            setSelectedIds(new Set());
-        }
+        if (selectionMode) setSelectedIds(new Set());
         setSelectionMode(!selectionMode);
     };
 
-    const handleSelectAll = () => {
-        const allIds = new Set(paginatedItems.map(item => item.id));
-        setSelectedIds(allIds);
-    };
+    const handleSelectAll = () => setSelectedIds(new Set(paginatedItems.map(item => item.id)));
 
     const handleToggleItemSelection = (id: number) => {
         setSelectedIds(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
-            }
+            if (newSet.has(id)) newSet.delete(id);
+            else newSet.add(id);
             return newSet;
         });
     };
@@ -245,7 +226,6 @@ export function MenuList() {
             showToast('No items selected', 'info');
             return;
         }
-
         const confirmed = await showConfirmation(
             'Confirm Bulk Delete',
             `Are you sure you want to delete ${selectedIds.size} item(s)?`,
@@ -253,36 +233,18 @@ export function MenuList() {
             'Yes, delete'
         );
         if (!confirmed) return;
-
-        try {
-            await api.post('/menu-items/bulk-delete', { ids: Array.from(selectedIds) });
-            await fetchMenuItems();
-            setSelectedIds(new Set());
-            setSelectionMode(false);
-            showToast(`${selectedIds.size} item(s) deleted successfully`, 'success');
-        } catch (err) {
-            let message = 'Bulk delete failed';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            alert(message);
-        }
+        bulkDeleteMutation.mutate(Array.from(selectedIds));
     };
 
-    const goToPage = (newPage: number) => {
-        setPage(newPage);
-    };
+    const goToPage = (newPage: number) => setPage(newPage);
 
-    if (loading && menuItems.length === 0) {
-        return <FetchingDetails />;
-    }
-    if (error) return <div>Error: {error}</div>;
+    if (isLoading) return <FetchingDetails />;
+    if (queryError) return <div>Error: {(queryError as Error).message}</div>;
 
     const menuColumns: Column[] = [
         { key: 'id', label: 'ID', width: selectionMode ? 'w-20' : 'w-16' },
         { key: 'name', label: 'Item Name', width: 'flex-1' },
+        { key: 'code', label: 'Code', width: 'w-20' },
         { key: 'category', label: 'Category', width: 'w-32' },
         { key: 'price', label: 'Price', width: 'w-24', align: 'right' },
         { key: 'actions', label: 'Actions', width: 'w-32', align: 'right' },
@@ -374,7 +336,7 @@ export function MenuList() {
                         onToggleSelection={handleToggleItemSelection}
                     />
                 ))}
-                {paginatedItems.length === 0 && !loading && (
+                {paginatedItems.length === 0 && !isLoading && (
                     <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
                         No items match your search/filters.
                     </div>
@@ -387,7 +349,7 @@ export function MenuList() {
                     currentPage={page}
                     totalPages={totalPages}
                     onPageChange={goToPage}
-                    disabled={loading}
+                    disabled={isLoading}
                 />
             )}
 

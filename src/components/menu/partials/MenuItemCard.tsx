@@ -48,9 +48,8 @@ export function MenuItemCard({
         }
     };
 
-    // Updated selection styles: full background highlight + left border accent
     const selectedStyles = selectionMode && isSelected
-        ? 'bg-blue-100 dark:bg-blue-900/50 border-l-4 border-l-primary'
+        ? 'bg-blue-200 dark:bg-blue-700 border-l-4 border-l-primary'
         : '';
 
     return (
@@ -80,6 +79,10 @@ export function MenuItemCard({
                 {item.name}
             </div>
 
+            <div className="w-20 text-gray-600 dark:text-gray-300">
+                {item.code}
+            </div>
+
             <div className="w-32 text-gray-600 dark:text-gray-300">
                 {item.category?.name || 'Uncategorized'}
             </div>
@@ -95,11 +98,7 @@ export function MenuItemCard({
                         handleEdit();
                     }}
                     disabled={selectionMode}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                        selectionMode
-                            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                    }`}
+                    className="px-3 py-1 text-sm rounded transition-colors bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Edit
                 </button>
@@ -109,11 +108,7 @@ export function MenuItemCard({
                         handleDelete();
                     }}
                     disabled={selectionMode}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                        selectionMode
-                            ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                            : 'bg-red-500 text-white hover:bg-red-600'
-                    }`}
+                    className="px-3 py-1 text-sm rounded transition-colors bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Delete
                 </button>

@@ -1,18 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
 import { InventoryCard } from "./partials/InventoryCard";
 import { InventoryForm } from "./forms/InventoryForm";
 import { InventorySearchForm } from "./forms/InventorySearchForm";
-import { InventoryActionForm } from "./forms/InventoryActionForm.tsx";
+import { InventoryActionForm } from "./forms/InventoryActionForm";
 import { InventoryShowModal } from "./partials/InventoryShowModal";
 import { FetchingDetails } from "../common/loading/FetchingDetails";
 import { Pagination } from "../common/Pagination";
 import { showToast, showConfirmation } from '../../utils/swalHelpers';
+import { TabBar } from "../common/TabBar";
+import { type Column, TableHeader } from "../common/TableHeader";
 import type { InventoryLog, MenuItem } from "./inventoryTypes";
-import { TabBar } from "../common/TabBar.tsx";
-import { type Column, TableHeader } from "../common/TableHeader.tsx";
 
 // Types for sort and filter
 type SortField = 'name' | 'quantity' | 'date_acquired' | 'expiry_date';
@@ -21,13 +22,32 @@ type AvailabilityFilter = 'all' | 'available' | 'unavailable';
 
 export function InventoryList() {
     const { setTitle } = useHeaderTitle();
+    const queryClient = useQueryClient();
     const tabBarRef = useRef<HTMLDivElement>(null);
 
-    const [inventoryLogs, setInventoryLogs] = useState<InventoryLog[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-    const [menuItemsLoading, setMenuItemsLoading] = useState(false);
+    const {
+        data: inventoryLogs = [],
+        isLoading,
+        error: queryError
+    } = useQuery({
+        queryKey: ['inventory-logs'],
+        queryFn: async () => {
+            const response = await api.get<InventoryLog[]>('/inventory-logs');
+            return response.data;
+        },
+    });
+
+    const {
+        data: menuItems = [],
+        isLoading: menuItemsLoading
+    } = useQuery({
+        queryKey: ['menu-items'],
+        queryFn: async () => {
+            const response = await api.get<MenuItem[]>('/menu-items');
+            return response.data;
+        },
+    });
+
     const [headerTopOffset, setHeaderTopOffset] = useState(160);
 
     // UI state for sticky top bar
@@ -57,24 +77,15 @@ export function InventoryList() {
         setTitle('Inventory List');
     }, [setTitle]);
 
-    useEffect(() => {
-        fetchInventoryLogs();
-        fetchMenuItems();
-    }, []);
-
-    // Use ResizeObserver to keep header positioned exactly below the tab bar
+    // ResizeObserver for sticky header
     useEffect(() => {
         if (!tabBarRef.current) return;
-
         const observer = new ResizeObserver(entries => {
             for (const entry of entries) {
-                const height = entry.contentRect.height;
-                setHeaderTopOffset(50 + height);
+                setHeaderTopOffset(50 + entry.contentRect.height);
             }
         });
-
         observer.observe(tabBarRef.current);
-
         return () => observer.disconnect();
     }, []);
 
@@ -125,6 +136,7 @@ export function InventoryList() {
 
     // Reset page when filters change
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPage(1);
     }, [searchTerm, selectedStatuses, availabilityFilter, sortBy, sortOrder]);
 
@@ -132,22 +144,126 @@ export function InventoryList() {
     const totalPages = Math.ceil(filteredLogs.length / perPage);
     const paginatedItems = filteredLogs.slice((page - 1) * perPage, page * perPage);
 
-    // Handlers for filters
+    // Mutations
+    const deleteMutation = useMutation({
+        mutationFn: (id: number) => api.delete(`/inventory-logs/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['inventory-logs'] });
+            showToast('Inventory record deleted successfully', 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Delete failed';
+            showToast(message, 'error');
+        },
+    });
+
+    const bulkDeleteMutation = useMutation({
+        mutationFn: (ids: number[]) => api.post('/inventory-logs/bulk-delete', { ids }),
+        onSuccess: (_, ids) => {
+            queryClient.invalidateQueries({ queryKey: ['inventory-logs'] });
+            setSelectedIds(new Set());
+            setSelectionMode(false);
+            showToast(`${ids.length} item(s) deleted successfully`, 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Bulk delete failed';
+            showToast(message, 'error');
+        },
+    });
+
+    const toggleAvailabilityMutation = useMutation({
+        mutationFn: ({ id, is_available }: { id: number; is_available: boolean }) =>
+            api.patch(`/inventory-logs/${id}/toggle-availability`, { is_available }),
+        onSuccess: (_, { is_available }) => {
+            queryClient.invalidateQueries({ queryKey: ['inventory-logs'] });
+            showToast(`Item marked as ${is_available ? 'available' : 'unavailable'}`, 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Failed to update availability';
+            showToast(message, 'error');
+        },
+    });
+
+    const bulkToggleMutation = useMutation({
+        mutationFn: ({ ids, is_available }: { ids: number[]; is_available: boolean }) =>
+            api.post('/inventory-logs/bulk-toggle-availability', { ids, is_available }),
+        onSuccess: (_, { is_available }) => {
+            queryClient.invalidateQueries({ queryKey: ['inventory-logs'] });
+            setSelectedIds(new Set());
+            setSelectionMode(false);
+            showToast(`${selectedIds.size} item(s) marked as ${is_available ? 'available' : 'unavailable'}`, 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Bulk update failed';
+            showToast(message, 'error');
+        },
+    });
+
+    const updateQuantityMutation = useMutation({
+        mutationFn: ({ id, quantity }: { id: number; quantity: number }) =>
+            api.patch(`/inventory-logs/${id}/quantity`, { quantity_in_stock: quantity }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['inventory-logs'] });
+            showToast('Quantity updated successfully', 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Failed to update quantity';
+            showToast(message, 'error');
+        },
+    });
+
+    // Handlers
+    const handleEdit = (log: InventoryLog) => {
+        setEditingLog(log);
+        setActiveTab('forms');
+        setContentExpanded(true);
+    };
+
+    const handleCancelEdit = () => setEditingLog(null);
+
+    const handleView = (id: number) => setViewingLogId(id);
+
+    const handleItemAdded = (action: 'add' | 'update') => {
+        queryClient.invalidateQueries({ queryKey: ['inventory-logs'] });
+        showToast(action === 'add' ? 'Inventory record added successfully' : 'Inventory record updated successfully', 'success');
+        setEditingLog(null);
+    };
+
+    const handleDelete = async (id: number) => {
+        const confirmed = await showConfirmation(
+            'Confirm Delete',
+            'Are you sure you want to delete this inventory record?',
+            'warning',
+            'Yes, delete'
+        );
+        if (!confirmed) return;
+        deleteMutation.mutate(id);
+    };
+
+    const handleToggleAvailability = (id: number, currentAvailability: boolean) => {
+        toggleAvailabilityMutation.mutate({ id, is_available: !currentAvailability });
+    };
+
     const handleStatusToggle = (status: string) => {
         setSelectedStatuses(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(status)) {
-                newSet.delete(status);
-            } else {
-                newSet.add(status);
-            }
+            if (newSet.has(status)) newSet.delete(status);
+            else newSet.add(status);
             return newSet;
         });
     };
 
-    const handleAvailabilityChange = (filter: AvailabilityFilter) => {
-        setAvailabilityFilter(filter);
-    };
+    const handleAvailabilityChange = (filter: AvailabilityFilter) => setAvailabilityFilter(filter);
 
     const handleSortChange = (by: SortField, order: SortOrder) => {
         setSortBy(by);
@@ -162,138 +278,19 @@ export function InventoryList() {
         setSortOrder('asc');
     };
 
-    const fetchInventoryLogs = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get<InventoryLog[]>('/inventory-logs');
-            setInventoryLogs(response.data);
-        } catch (err) {
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message || 'Failed to fetch inventory logs');
-            } else if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('An unknown error occurred');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchMenuItems = async () => {
-        setMenuItemsLoading(true);
-        try {
-            const response = await api.get<MenuItem[]>('/menu-items');
-            setMenuItems(response.data);
-        } catch (err) {
-            console.error('Failed to load menu items', err);
-        } finally {
-            setMenuItemsLoading(false);
-        }
-    };
-
-    const handleEdit = (log: InventoryLog) => {
-        setEditingLog(log);
-        setActiveTab('forms');
-        setContentExpanded(true);
-    };
-
-    const handleCancelEdit = () => {
-        setEditingLog(null);
-    };
-
-    const handleView = (id: number) => {
-        setViewingLogId(id);
-    };
-
-    const handleItemAdded = (action: 'add' | 'update') => {
-        fetchInventoryLogs().then(() => {
-            if (action === 'add') {
-                showToast('Inventory record added successfully', 'success');
-            } else {
-                showToast('Inventory record updated successfully', 'success');
-            }
-        });
-        setEditingLog(null);
-    };
-
-    const handleDelete = async (id: number) => {
-        const confirmed = await showConfirmation(
-            'Confirm Delete',
-            'Are you sure you want to delete this inventory record?',
-            'warning',
-            'Yes, delete'
-        );
-        if (!confirmed) return;
-
-        try {
-            await api.delete(`/inventory-logs/${id}`);
-            setInventoryLogs(prev => prev.filter(log => log.id !== id));
-            showToast('Inventory record deleted successfully', 'success');
-        } catch (err) {
-            let message = 'Delete failed';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            alert(message);
-        }
-    };
-
-    const handleToggleAvailability = async (id: number, currentAvailability: boolean) => {
-        try {
-            const newAvailability = !currentAvailability;
-            setInventoryLogs(prev =>
-                prev.map(log =>
-                    log.id === id ? { ...log, is_available: newAvailability } : log
-                )
-            );
-
-            await api.patch(`/inventory-logs/${id}/toggle-availability`, {
-                is_available: newAvailability
-            });
-
-            showToast(`Item marked as ${newAvailability ? 'available' : 'unavailable'}`, 'success');
-        } catch (err) {
-            setInventoryLogs(prev =>
-                prev.map(log =>
-                    log.id === id ? { ...log, is_available: currentAvailability } : log
-                )
-            );
-
-            let message = 'Failed to update availability';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            showToast(message, 'error');
-        }
-    };
-
     // Selection handlers
     const toggleSelectionMode = () => {
-        if (selectionMode) {
-            setSelectedIds(new Set());
-        }
+        if (selectionMode) setSelectedIds(new Set());
         setSelectionMode(!selectionMode);
     };
 
-    const handleSelectAll = () => {
-        // Select all items on the current page
-        const allIds = new Set(paginatedItems.map(log => log.id));
-        setSelectedIds(allIds);
-    };
+    const handleSelectAll = () => setSelectedIds(new Set(paginatedItems.map(log => log.id)));
 
     const handleToggleItemSelection = (id: number) => {
         setSelectedIds(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(id)) {
-                newSet.delete(id);
-            } else {
-                newSet.add(id);
-            }
+            if (newSet.has(id)) newSet.delete(id);
+            else newSet.add(id);
             return newSet;
         });
     };
@@ -303,7 +300,6 @@ export function InventoryList() {
             showToast('No items selected', 'info');
             return;
         }
-
         const confirmed = await showConfirmation(
             'Confirm Bulk Delete',
             `Are you sure you want to delete ${selectedIds.size} item(s)?`,
@@ -311,22 +307,7 @@ export function InventoryList() {
             'Yes, delete'
         );
         if (!confirmed) return;
-
-        try {
-            await api.post('/inventory-logs/bulk-delete', { ids: Array.from(selectedIds) });
-            await fetchInventoryLogs();
-            setSelectedIds(new Set());
-            setSelectionMode(false);
-            showToast(`${selectedIds.size} item(s) deleted successfully`, 'success');
-        } catch (err) {
-            let message = 'Bulk delete failed';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            alert(message);
-        }
+        bulkDeleteMutation.mutate(Array.from(selectedIds));
     };
 
     const handleMarkAvailable = async () => {
@@ -334,7 +315,6 @@ export function InventoryList() {
             showToast('No items selected', 'info');
             return;
         }
-
         const confirmed = await showConfirmation(
             'Confirm Bulk Update',
             `Are you sure you want to mark ${selectedIds.size} item(s) as available?`,
@@ -342,25 +322,7 @@ export function InventoryList() {
             'Yes, mark available'
         );
         if (!confirmed) return;
-
-        try {
-            await api.post('/inventory-logs/bulk-toggle-availability', {
-                ids: Array.from(selectedIds),
-                is_available: true
-            });
-            await fetchInventoryLogs();
-            setSelectedIds(new Set());
-            setSelectionMode(false);
-            showToast(`${selectedIds.size} item(s) marked as available`, 'success');
-        } catch (err) {
-            let message = 'Bulk update failed';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            showToast(message, 'error');
-        }
+        bulkToggleMutation.mutate({ ids: Array.from(selectedIds), is_available: true });
     };
 
     const handleMarkUnavailable = async () => {
@@ -368,7 +330,6 @@ export function InventoryList() {
             showToast('No items selected', 'info');
             return;
         }
-
         const confirmed = await showConfirmation(
             'Confirm Bulk Update',
             `Are you sure you want to mark ${selectedIds.size} item(s) as unavailable?`,
@@ -376,71 +337,17 @@ export function InventoryList() {
             'Yes, mark unavailable'
         );
         if (!confirmed) return;
-
-        try {
-            await api.post('/inventory-logs/bulk-toggle-availability', {
-                ids: Array.from(selectedIds),
-                is_available: false
-            });
-            await fetchInventoryLogs();
-            setSelectedIds(new Set());
-            setSelectionMode(false);
-            showToast(`${selectedIds.size} item(s) marked as unavailable`, 'success');
-        } catch (err) {
-            let message = 'Bulk update failed';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            showToast(message, 'error');
-        }
+        bulkToggleMutation.mutate({ ids: Array.from(selectedIds), is_available: false });
     };
 
     const handleUpdateQuantity = async (id: number, newQuantity: number) => {
-        try {
-            // Optimistic update
-            setInventoryLogs(prev =>
-                prev.map(log =>
-                    log.id === id ? { ...log, quantity_in_stock: newQuantity } : log
-                )
-            );
-
-            await api.patch(`/inventory-logs/${id}/quantity`, {
-                quantity_in_stock: newQuantity
-            });
-
-            showToast('Quantity updated successfully', 'success');
-        } catch (err) {
-            // Revert on error
-            setInventoryLogs(prev =>
-                prev.map(log =>
-                    log.id === id ? { ...log, quantity_in_stock: inventoryLogs.find(l => l.id === id)!.quantity_in_stock } : log
-                )
-            );
-
-            let message = 'Failed to update quantity';
-            if (axios.isAxiosError(err)) {
-                message = err.response?.data?.message || err.message;
-            } else if (err instanceof Error) {
-                message = err.message;
-            }
-            showToast(message, 'error');
-            throw err;
-        }
+        updateQuantityMutation.mutate({ id, quantity: newQuantity });
     };
 
-    const goToPage = (newPage: number) => {
-        setPage(newPage);
-    };
+    const goToPage = (newPage: number) => setPage(newPage);
 
-    if (loading && inventoryLogs.length === 0) {
-        return <FetchingDetails />;
-    }
-
-    if (error) {
-        return <div className="p-4 text-red-600 dark:text-red-400">Error: {error}</div>;
-    }
+    if (isLoading) return <FetchingDetails />;
+    if (queryError) return <div className="p-4 text-red-600 dark:text-red-400">Error: {(queryError as Error).message}</div>;
 
     const inventoryColumns: Column[] = [
         { key: 'id', label: 'ID', width: selectionMode ? 'w-20' : 'w-16' },
@@ -472,9 +379,7 @@ export function InventoryList() {
                     formsLabel={editingLog ? 'Edit Inventory' : 'Add Inventory'}
                     searchLabel="Search and Filter"
                     selectLabel="Actions"
-                    onFormsTabSelected={() => {
-                        setEditingLog(null);
-                    }}
+                    onFormsTabSelected={() => setEditingLog(null)}
                 />
 
                 {contentExpanded && (
@@ -544,7 +449,7 @@ export function InventoryList() {
                         onUpdateQuantity={handleUpdateQuantity}
                     />
                 ))}
-                {filteredLogs.length === 0 && !loading && (
+                {filteredLogs.length === 0 && !isLoading && (
                     <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
                         No inventory records match your filters.
                     </div>
@@ -557,7 +462,7 @@ export function InventoryList() {
                     currentPage={page}
                     totalPages={totalPages}
                     onPageChange={goToPage}
-                    disabled={loading}
+                    disabled={isLoading}
                 />
             )}
 

@@ -110,7 +110,7 @@ export function InventoryCard({
     };
 
     const selectedStyles = selectionMode && isSelected
-        ? 'bg-blue-100 dark:bg-blue-900/50 border-l-4 border-l-primary'
+        ? 'bg-blue-200 dark:bg-blue-700 border-l-4 border-l-primary'
         : '';
 
     const formatDate = (dateString: string | null) => {
@@ -211,18 +211,21 @@ export function InventoryCard({
                 {getStatusBadge()}
             </div>
 
-            {/* Availability Toggle */}
+            {/* Availability Toggle - redesigned as clickable pill */}
             <div className="w-20 flex justify-center">
                 <button
                     onClick={handleToggleAvailability}
                     disabled={selectionMode || !onToggleAvailability}
-                    className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+                    className={`flex items-center justify-center gap-1 px-2 py-1 text-xs font-medium rounded-full border shadow-sm transition-all ${
                         log.is_available
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    } ${selectionMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            ? 'bg-green-500 text-white border-green-600 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 dark:border-green-500'
+                            : 'bg-gray-500 text-white border-gray-600 hover:bg-gray-600 dark:bg-gray-600 dark:hover:bg-gray-700 dark:border-gray-500'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                        log.is_available ? 'focus:ring-green-500' : 'focus:ring-gray-500'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                    {log.is_available ? 'Available' : 'Unavailable'}
+                    <i className={`fas fa-${log.is_available ? 'check' : 'times'} text-xs`} />
+                    <span>{log.is_available ? 'Available' : 'Unavailable'}</span>
                 </button>
             </div>
 
