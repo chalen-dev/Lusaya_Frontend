@@ -8,12 +8,12 @@ import { FetchingDetails } from '../common/loading/FetchingDetails';
 import { Pagination } from '../common/Pagination';
 import { TabBar } from '../common/TabBar';
 import { showToast, showConfirmation } from '../../utils/swalHelpers';
-import { OrderCard } from './partials/OrderCard';
 import { OrderForm } from './forms/OrderForm';
 import { OrderSearchForm } from './forms/OrderSearchForm';
 import type { Order, User, OrderStatus } from './orderTypes';
 import type { InventoryLog } from '../inventory/inventoryTypes';
-import {OrderActionForm} from "./forms/OrderActionForm.tsx";
+import { OrderActionForm } from "./forms/OrderActionForm";
+import { OrderCard } from "./partials/order_card/OrderCard";
 
 export function OrdersList() {
     const { setTitle } = useHeaderTitle();
@@ -99,13 +99,31 @@ export function OrdersList() {
     const filteredOrders = orders
         .filter(order => {
             const term = searchTerm.toLowerCase();
+
+            // Search in customer name
             const customerName = order.user?.name?.toLowerCase() || '';
+            if (customerName.includes(term)) return true;
+
+            // Search in order description
             const description = order.description?.toLowerCase() || '';
-            const matchesSearch = !searchTerm || customerName.includes(term) || description.includes(term);
+            if (description.includes(term)) return true;
 
+            // Search in order items (menu item name and category)
+            if (order.order_items) {
+                for (const item of order.order_items) {
+                    const menuItemName = item.inventory_log?.menu_item?.name?.toLowerCase() || '';
+                    if (menuItemName.includes(term)) return true;
+
+                    const categoryName = item.inventory_log?.menu_item?.category?.name?.toLowerCase() || '';
+                    if (categoryName.includes(term)) return true;
+                }
+            }
+
+            return false;
+        })
+        .filter(order => {
             const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(order.order_status);
-
-            return matchesSearch && matchesStatus;
+            return matchesStatus;
         })
         .sort((a, b) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,6 +198,22 @@ export function OrdersList() {
         },
     });
 
+    // Status update mutation – using the dedicated endpoint
+    const statusUpdateMutation = useMutation({
+        mutationFn: ({ id, status }: { id: number; status: string }) =>
+            api.patch(`/orders/${id}/status`, { order_status: status }),
+        onSuccess: (_data, { id, status }) => {
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            showToast(`Order #${id} status updated to ${status}`, 'success');
+        },
+        onError: (error) => {
+            const message = axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : 'Failed to update status';
+            showToast(message, 'error');
+        },
+    });
+
     // Handlers
     const handleEdit = (order: Order) => {
         setEditingOrder(order);
@@ -208,6 +242,10 @@ export function OrdersList() {
         );
         if (!confirmed) return;
         deleteMutation.mutate(id);
+    };
+
+    const handleStatusChange = async (orderId: number, newStatus: string) => {
+        await statusUpdateMutation.mutateAsync({ id: orderId, status: newStatus });
     };
 
     const handleToggleItemSelection = (id: number) => {
@@ -330,6 +368,7 @@ export function OrdersList() {
                         onDelete={handleDelete}
                         onEdit={handleEdit}
                         onView={handleView}
+                        onStatusChange={handleStatusChange}
                         selectionMode={selectionMode}
                         isSelected={selectedIds.has(order.id)}
                         onToggleSelection={handleToggleItemSelection}

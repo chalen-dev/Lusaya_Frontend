@@ -1,15 +1,16 @@
 // components/orders/partials/OrderCard.tsx
 import { useState } from 'react';
-import { showToast } from '../../../utils/swalHelpers';
-import type { Order } from "../orderTypes";
-import { OrderItemsTable } from './OrderItemsTable';
+import { OrderStatusModal } from './OrderStatusModal';
+import {showToast} from "../../../../utils/swalHelpers.ts";
+import type {Order} from "../../orderTypes.ts";
+import {OrderItemsTable} from "../OrderItemsTable.tsx";
 
 interface OrderCardProps {
     order: Order;
     onDelete: (id: number) => void;
     onEdit: (order: Order) => void;
     onView: (id: number) => void;
-    onStatusEdit?: (orderId: number, currentStatus: string) => void;
+    onStatusChange?: (orderId: number, newStatus: string) => Promise<void>;
     selectionMode?: boolean;
     isSelected?: boolean;
     onToggleSelection?: (id: number) => void;
@@ -20,14 +21,14 @@ export function OrderCard({
                               onDelete,
                               onEdit,
                               onView,
-                              onStatusEdit,
+                              onStatusChange,
                               selectionMode = false,
                               isSelected = false,
                               onToggleSelection
                           }: OrderCardProps) {
     const [expanded, setExpanded] = useState(false);
+    const [statusModalOpen, setStatusModalOpen] = useState(false);
 
-    // Compute total from order items (fallback to 0)
     const totalAmount = order.order_items?.reduce((sum, item) => sum + Number(item.amount), 0) || 0;
 
     const handleEdit = (e: React.MouseEvent) => {
@@ -51,8 +52,14 @@ export function OrderCard({
 
     const handleStatusClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (selectionMode || !onStatusEdit) return;
-        onStatusEdit(order.id, order.order_status);
+        if (selectionMode || !onStatusChange) return;
+        setStatusModalOpen(true);
+    };
+
+    const handleStatusChange = async (orderId: number, newStatus: string) => {
+        if (!onStatusChange) return;
+        await onStatusChange(orderId, newStatus);
+        showToast(`Order #${orderId} status updated to ${newStatus}`, 'success');
     };
 
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,16 +96,16 @@ export function OrderCard({
         };
         const { color, label } = statusMap[order.order_status] || statusMap.pending;
         return (
-            <span
-                className={`px-2 py-1 text-xs font-semibold rounded-full cursor-pointer transition-opacity hover:opacity-80 ${color}`}
+            <button
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 ${color}`}
                 onClick={handleStatusClick}
+                disabled={selectionMode}
             >
                 {label}
-            </span>
+            </button>
         );
     };
 
-    // Stronger selected styles: full border and more visible background
     const selectedStyles = selectionMode && isSelected
         ? 'bg-blue-100 dark:bg-blue-900/50 border-2 border-primary'
         : '';
@@ -117,7 +124,6 @@ export function OrderCard({
                 !selectionMode && 'hover:shadow-md'
             }`}
         >
-            {/* Header row (clickable) – disable hover when selectionMode is true */}
             <div
                 onClick={handleCardClick}
                 className={`flex items-center w-full p-4 cursor-pointer gap-4 ${
@@ -136,37 +142,30 @@ export function OrderCard({
                     </div>
                 )}
 
-                {/* ID */}
                 <div className={`${selectionMode ? 'w-20' : 'w-16'} text-gray-500 dark:text-gray-400 font-mono`}>
                     #{order.id}
                 </div>
 
-                {/* Customer */}
                 <div className="flex-1 font-medium text-gray-900 dark:text-gray-100 truncate">
                     {customerName}
                 </div>
 
-                {/* Status Badge (clickable) */}
                 <div className="w-24 flex justify-center">
                     {getStatusBadge()}
                 </div>
 
-                {/* Total Amount (computed from items) */}
                 <div className="w-28 text-gray-900 dark:text-gray-100 font-semibold text-right">
                     ₱{totalAmount.toFixed(2)}
                 </div>
 
-                {/* Items Count */}
                 <div className="w-20 text-gray-600 dark:text-gray-300 text-center">
                     {itemCount} {itemCount === 1 ? 'item' : 'items'}
                 </div>
 
-                {/* Order Date */}
                 <div className="w-28 text-gray-600 dark:text-gray-300 text-center">
                     {formatDate(order.created_at)}
                 </div>
 
-                {/* Actions */}
                 <div className="w-40 flex gap-2 justify-end">
                     <button
                         onClick={handleView}
@@ -191,7 +190,6 @@ export function OrderCard({
                     </button>
                 </div>
 
-                {/* Expand/collapse toggle (rightmost) */}
                 <button
                     onClick={handleExpandToggle}
                     disabled={selectionMode}
@@ -202,12 +200,19 @@ export function OrderCard({
                 </button>
             </div>
 
-            {/* Expanded content: order items */}
             {expanded && (
                 <div className="px-4 pb-4">
                     <OrderItemsTable items={order.order_items || []} />
                 </div>
             )}
+
+            <OrderStatusModal
+                isOpen={statusModalOpen}
+                onClose={() => setStatusModalOpen(false)}
+                currentStatus={order.order_status}
+                orderId={order.id}
+                onStatusChange={handleStatusChange}
+            />
         </div>
     );
 }

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { TextArea } from '../../common/input/TextArea';
 import { showConfirmation } from '../../../utils/swalHelpers';
 import { SearchableSelect } from '../../common/input/SearchableSelect';
+import { ORDER_STATUS_OPTIONS } from '../orderTypes';
 import type { Order, User } from '../orderTypes';
 import type { InventoryLog } from '../../inventory/inventoryTypes';
 import { OrderItemSelectorModal } from './order_item/OrderItemSelectorModal';
@@ -28,6 +29,7 @@ export function OrderForm({
                               customers,
                               userRole
                           }: OrderFormProps) {
+    const [orderStatus, setOrderStatus] = useState<string>('pending');
     const [description, setDescription] = useState<string>('');
     const [selectedCustomer, setSelectedCustomer] = useState<User | null>(null);
     const [customerSearchTerm, setCustomerSearchTerm] = useState<string>('');
@@ -35,6 +37,7 @@ export function OrderForm({
     const [errors, setErrors] = useState({
         description: '',
         customer_id: '',
+        order_status: '',
     });
 
     const [selectedItems, setSelectedItems] = useState<{ inventoryId: number; quantity: number }[]>([]);
@@ -44,6 +47,7 @@ export function OrderForm({
 
     useEffect(() => {
         if (editingOrder) {
+            setOrderStatus(editingOrder.order_status);
             setDescription(editingOrder.description || '');
             if (isStaff) {
                 const customer = customers.find(c => c.id === editingOrder.user_id);
@@ -57,11 +61,12 @@ export function OrderForm({
     }, [editingOrder, customers, isStaff]);
 
     const resetForm = () => {
+        setOrderStatus('pending');
         setDescription('');
         setSelectedCustomer(null);
         setCustomerSearchTerm('');
         setSelectedItems([]);
-        setErrors({ description: '', customer_id: '' });
+        setErrors({ description: '', customer_id: '', order_status: '' });
     };
 
     const handleCancel = () => {
@@ -100,6 +105,7 @@ export function OrderForm({
         const newErrors = {
             description: '',
             customer_id: isStaff && !selectedCustomer ? 'Customer is required' : '',
+            order_status: '',
         };
         setErrors(newErrors);
         if (Object.values(newErrors).some(e => e !== '')) return;
@@ -120,7 +126,7 @@ export function OrderForm({
             let orderId: number;
             if (editingOrder) {
                 await api.put(`/orders/${editingOrder.id}`, {
-                    order_status: 'pending',
+                    order_status: orderStatus,
                     description: description || null,
                 });
                 orderId = editingOrder.id;
@@ -168,6 +174,7 @@ export function OrderForm({
                         ...prev,
                         description: backendErrors.description?.[0] || '',
                         customer_id: backendErrors.user_id?.[0] || '',
+                        order_status: backendErrors.order_status?.[0] || '',
                     }));
                 }
             } else if (err instanceof Error) {
@@ -219,8 +226,8 @@ export function OrderForm({
                                         -
                                     </button>
                                     <span className="w-8 text-center text-sm font-medium text-gray-900 dark:text-gray-100">
-                                        {item.quantity}
-                                    </span>
+                                            {item.quantity}
+                                        </span>
                                     <button
                                         type="button"
                                         onClick={(e) => {
@@ -262,6 +269,7 @@ export function OrderForm({
 
     const formContent = (
         <>
+            {/* Adding mode */}
             {!editingOrder && (
                 <div className="flex gap-6">
                     {/* Left column: items table */}
@@ -352,64 +360,120 @@ export function OrderForm({
 
             {/* Editing mode */}
             {editingOrder && (
-                <div className="space-y-4">
-                    {isStaff && (
-                        <SearchableSelect
-                            items={customers}
-                            value={customerSearchTerm}
-                            onChange={(e) => setCustomerSearchTerm(e.target.value)}
-                            onSelect={(customer) => {
-                                setSelectedCustomer(customer);
-                                setCustomerSearchTerm(customer.name);
-                            }}
-                            selectedItem={selectedCustomer}
-                            getItemLabel={(customer) => customer.name}
-                            getItemValue={(customer) => customer.id}
-                            renderItem={(customer) => (
-                                <>
-                                    <div className="font-medium">{customer.name}</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {customer.email}
-                                    </div>
-                                </>
+                <div className="flex gap-6">
+                    {/* Left column: items table (editable) */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Order Items</h4>
+                            <button
+                                type="button"
+                                onClick={() => setIsSelectorOpen(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-medium text-sm rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors shadow-md"
+                            >
+                                <i className="fas fa-plus" />
+                                Add Items
+                            </button>
+                        </div>
+                        {selectedItems.length === 0 ? (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">No items added yet.</p>
+                        ) : (
+                            <div className="max-h-96 overflow-auto">
+                                {renderItemsTable()}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right column: customer (read-only), status buttons, description, buttons */}
+                    <div className="w-80 flex flex-col space-y-4">
+                        {isStaff && (
+                            <SearchableSelect
+                                items={customers}
+                                value={customerSearchTerm}
+                                onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                                onSelect={(customer) => {
+                                    // This won't be called because disabled, but keep for consistency
+                                    setSelectedCustomer(customer);
+                                    setCustomerSearchTerm(customer.name);
+                                }}
+                                selectedItem={selectedCustomer}
+                                getItemLabel={(customer) => customer.name}
+                                getItemValue={(customer) => customer.id}
+                                renderItem={(customer) => (
+                                    <>
+                                        <div className="font-medium">{customer.name}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            {customer.email}
+                                        </div>
+                                    </>
+                                )}
+                                error={errors.customer_id}
+                                required={false}
+                                label="Customer"
+                                placeholder="Customer"
+                                disabled={true} // Read-only during edit
+                            />
+                        )}
+
+                        {/* Status buttons */}
+                        <div>
+                            <span className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Order Status</span>
+                            <div className="flex flex-wrap gap-2">
+                                {ORDER_STATUS_OPTIONS.map(option => {
+                                    const isCurrent = option.value === orderStatus;
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={() => setOrderStatus(option.value)}
+                                            className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 ${
+                                                isCurrent
+                                                    ? 'bg-primary text-white border-primary ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-800'
+                                                    : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {errors.order_status && (
+                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.order_status}</p>
                             )}
-                            error={errors.customer_id}
-                            required
-                            label="Customer"
-                            placeholder="Search by name or email..."
+                        </div>
+
+                        <TextArea
+                            label="Description (optional)"
+                            name="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            error={errors.description}
+                            rows={3}
                         />
-                    )}
-                    <TextArea
-                        label="Description (optional)"
-                        name="description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        error={errors.description}
-                        rows={3}
-                    />
-                    <div className="flex justify-end gap-4">
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            disabled={submitting}
-                            className="px-4 py-2 bg-gray-500 text-white font-medium text-sm rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={submitting}
-                            className="px-4 py-2 bg-primary text-white font-medium text-sm rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-                        >
-                            {submitting ? (
-                                <span className="flex items-center gap-2">
-                                    <LoadingSpinner size={16} />
-                                    Updating...
-                                </span>
-                            ) : (
-                                'Update Order'
-                            )}
-                        </button>
+
+                        <div className="flex justify-end gap-4 pt-2">
+                            <button
+                                type="button"
+                                onClick={handleCancel}
+                                disabled={submitting}
+                                className="px-4 py-2 bg-gray-500 text-white font-medium text-sm rounded-lg hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={submitting}
+                                className="px-4 py-2 bg-primary text-white font-medium text-sm rounded-lg hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                            >
+                                {submitting ? (
+                                    <span className="flex items-center gap-2">
+                            <LoadingSpinner size={16} />
+                            Updating...
+                        </span>
+                                ) : (
+                                    'Update Order'
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
