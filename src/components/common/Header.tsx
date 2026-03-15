@@ -24,7 +24,7 @@ export const Header = ({
     const { user } = useAuth();
 
     return (
-        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 px-6 sm:px-8 py-3 flex justify-between items-center h-[70px] sticky top-0 z-10 shadow-sm">
+        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 px-6 sm:px-8 py-3 flex justify-between items-center h-[70px] sticky top-0 z-30 shadow-sm">
             <div className={`flex items-center ${includeIcon ? 'space-x-2' : ''}`}>
                 {showBackButton && (
                     <button
@@ -39,6 +39,7 @@ export const Header = ({
                 <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             </div>
             <div className="flex items-center gap-2">
+                {user && <NotificationButton />}
                 <button
                     onClick={toggleTheme}
                     className="relative w-12 h-6 bg-gray-200 dark:bg-gray-700 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-gray-900"
@@ -54,7 +55,6 @@ export const Header = ({
                         </span>
                     </span>
                 </button>
-                {user && <NotificationButton />}
             </div>
         </header>
     );

@@ -15,7 +15,7 @@ export function CustomerLayout() {
                 <NavSidebar />
                 <main className="flex-1 flex flex-col min-h-screen ml-64">
                     <Header showBackButton onBack={() => window.history.back()} includeIcon={false} />
-                    <div className="flex-1 p-6 bg-gray-50 dark:bg-gray-800">
+                    <div className="flex-1 bg-gray-50 dark:bg-gray-800">
                         <Outlet />
                     </div>
                 </main>

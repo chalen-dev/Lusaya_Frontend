@@ -1,22 +1,22 @@
 // contexts/NotificationContext.tsx
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import api from '../services/api';
 
 export interface Notification {
-    id: string | number;
+    id: number;
     title: string;
     message: string;
     read: boolean;
-    createdAt: string;
-    link?: string;
+    created_at: string;
+    data?: Record<string, unknown>;
 }
 
 interface NotificationContextType {
     notifications: Notification[];
     unreadCount: number;
-    markAsRead: (id: string | number) => void;
-    markAllAsRead: () => void;
-    addNotification: (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => void;
+    markAsRead: (id: number) => Promise<void>;
+    markAllAsRead: () => Promise<void>;
     fetchNotifications: () => Promise<void>;
 }
 
@@ -27,51 +27,52 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
 
+    const fetchNotifications = useCallback(async () => {
+        if (!user) return;
+        try {
+            const response = await api.get<Notification[]>('/notifications');
+            setNotifications(response.data);
+        } catch (error) {
+            console.error('Failed to fetch notifications', error);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        fetchNotifications();
+    }, [fetchNotifications]);
+
+    // Poll every 30 seconds
+    useEffect(() => {
+        if (!user) return;
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
+    }, [user, fetchNotifications]);
+
     // Update unread count whenever notifications change
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setUnreadCount(notifications.filter(n => !n.read).length);
     }, [notifications]);
 
-    // Mock fetching – replace with real API call
-    const fetchNotifications = async () => {
-        if (!user) return;
-        // Simulate API call
-        const mock: Notification[] = [
-            { id: 1, title: 'Order Confirmed', message: 'Your order #123 has been confirmed.', read: false, createdAt: new Date().toISOString() },
-            { id: 2, title: 'Order Ready', message: 'Your order #124 is ready for pickup.', read: true, createdAt: new Date().toISOString() },
-        ];
-        setNotifications(mock);
-    };
-
-    // Load notifications on login
-    useEffect(() => {
-        if (user) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            fetchNotifications();
-        } else {
-            setNotifications([]);
+    const markAsRead = async (id: number) => {
+        try {
+            await api.patch(`/notifications/${id}/read`);
+            setNotifications(prev =>
+                prev.map(n => (n.id === id ? { ...n, read: true } : n))
+            );
+        } catch (error) {
+            console.error('Failed to mark as read', error);
         }
-    }, [user]);
-
-    const markAsRead = (id: string | number) => {
-        setNotifications(prev =>
-            prev.map(n => (n.id === id ? { ...n, read: true } : n))
-        );
     };
 
-    const markAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    };
-
-    const addNotification = (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => {
-        const newNotification: Notification = {
-            id: Date.now(),
-            read: false,
-            createdAt: new Date().toISOString(),
-            ...notification,
-        };
-        setNotifications(prev => [newNotification, ...prev]);
+    const markAllAsRead = async () => {
+        try {
+            await api.post('/notifications/mark-all-read');
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        } catch (error) {
+            console.error('Failed to mark all as read', error);
+        }
     };
 
     return (
@@ -80,7 +81,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
             unreadCount,
             markAsRead,
             markAllAsRead,
-            addNotification,
             fetchNotifications,
         }}>
             {children}
@@ -91,8 +91,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 // eslint-disable-next-line react-refresh/only-export-components
 export const useNotifications = () => {
     const context = useContext(NotificationContext);
-    if (!context) {
-        throw new Error('useNotifications must be used within NotificationProvider');
-    }
+    if (!context) throw new Error('useNotifications must be used within NotificationProvider');
     return context;
 };

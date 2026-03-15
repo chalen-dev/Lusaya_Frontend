@@ -1,11 +1,11 @@
 // components/customer_side/my_orders/MyOrders.tsx
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useHeaderTitle } from '../../../contexts/HeaderTitleContext';
 import api from '../../../services/api';
-import { LoadingSpinner } from '../../common/loading/LoadingSpinner';
 import { MyOrderRow } from './MyOrderRow';
 import type { Order } from '../../orders/orderTypes';
+import {LoadingScreen} from "../../common/loading/LoadingScreen.tsx";
 
 // Status priority: ready > preparing > pending > completed > cancelled
 const statusPriority: Record<string, number> = {
@@ -18,6 +18,7 @@ const statusPriority: Record<string, number> = {
 
 export default function MyOrders() {
     const { setTitle } = useHeaderTitle();
+    const queryClient = useQueryClient();
     const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
 
     useEffect(() => {
@@ -45,7 +46,12 @@ export default function MyOrders() {
         setExpandedOrderId(expandedOrderId === id ? null : id);
     };
 
-    if (isLoading) return <LoadingSpinner />;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const handleOrderCancelled = (_orderId: number) => {
+        queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+    };
+
+    if (isLoading) return <LoadingScreen />;
 
     if (orders.length === 0) {
         return (
@@ -68,6 +74,7 @@ export default function MyOrders() {
                         <th className="w-20 px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Items</th>
                         <th className="w-28 px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
                         <th className="w-8 px-4 py-2 text-center"></th>
+                        <th className="w-8 px-4 py-2 text-center"></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -77,6 +84,7 @@ export default function MyOrders() {
                             order={order}
                             expanded={expandedOrderId === order.id}
                             onExpandToggle={handleExpandToggle}
+                            onOrderCancelled={handleOrderCancelled}
                         />
                     ))}
                     </tbody>
