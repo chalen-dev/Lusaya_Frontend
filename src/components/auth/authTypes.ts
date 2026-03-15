@@ -4,6 +4,7 @@ export interface User {
     email: string;
     role: 'admin' | 'cashier' | 'customer';
     is_POS?: boolean; // true for POS customer
+    is_blacklisted?: boolean;
 }
 
 export interface LoginCredentials {

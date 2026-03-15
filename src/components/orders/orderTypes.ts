@@ -51,3 +51,11 @@ export const ORDER_STATUS_OPTIONS = [
 ] as const;
 
 export type OrderStatusFilter = OrderStatus | 'all';
+
+export const STATUS_PRIORITY: Record<OrderStatus, number> = {
+    pending: 1,
+    preparing: 2,
+    ready: 3,
+    completed: 4,
+    cancelled: 5,
+};

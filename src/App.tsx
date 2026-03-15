@@ -18,6 +18,7 @@ import FoodChoices from "./components/customer_side/menu_order/FoodChoices.tsx";
 import MenuOrder from "./components/customer_side/menu_order/MenuOrder.tsx";
 import Checkout from "./components/customer_side/menu_order/Checkout.tsx";
 import MyOrders from "./components/customer_side/my_orders/MyOrders.tsx";
+import {UserManagement} from "./components/admin/UserManagement.tsx";
 
 
 function App() {
@@ -36,10 +37,7 @@ function App() {
 
                         <Route element={<RoleBasedRoute allowedRoles={'admin'} />}>
                             <Route path="/dashboard" element={<Dashboard />} />
-                        </Route>
-
-                        <Route element={<RoleBasedRoute allowedRoles="cashier" />}>
-
+                            <Route path="/userManagement" element={<UserManagement />} />
                         </Route>
 
                         <Route element={<RoleBasedRoute allowedRoles={['admin', 'cashier']} />}>

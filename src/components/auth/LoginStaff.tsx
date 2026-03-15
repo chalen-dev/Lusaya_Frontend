@@ -5,8 +5,8 @@ export function LoginStaff() {
     return (
         <LoginForm
             headerTitle={`${APP_NAME} Staff`}
-            allowedRoles={['admin', 'cashier']}
-            redirectPath={(role) => role === 'admin' ? '/dashboard' : '/ordersList'}
+            allowedRoles={['admin']} // only admin allowed
+            redirectPath="/dashboard"
             blockedMessage="Invalid staff credentials"
         />
     );

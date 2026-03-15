@@ -107,7 +107,7 @@ export function NavSidebar({ ...rest }: LeftSidebarProps) {
 
                     {isAdmin && (
                         <>
-                            <NavLink to="" icon="fa-users">
+                            <NavLink to="/userManagement" icon="fa-users">
                                 Users
                             </NavLink>
                         </>

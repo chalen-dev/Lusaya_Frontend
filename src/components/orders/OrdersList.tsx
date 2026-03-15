@@ -1,4 +1,3 @@
-// pages/orders/OrdersList.tsx
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
@@ -11,10 +10,10 @@ import { TableHeader, type Column } from '../common/TableHeader';
 import { showToast, showConfirmation } from '../../utils/swalHelpers';
 import { OrderForm } from './forms/OrderForm';
 import { OrderSearchForm } from './forms/OrderSearchForm';
-import type { Order, User, OrderStatus } from './orderTypes';
+import { type Order, type User, type OrderStatus, STATUS_PRIORITY } from './orderTypes';
 import type { InventoryLog } from '../inventory/inventoryTypes';
-import { OrderActionForm } from "./forms/OrderActionForm";
-import {OrderRow} from "./partials/OrderRow.tsx";
+import { OrderActionForm } from './forms/OrderActionForm';
+import { OrderRow } from './partials/OrderRow.tsx';
 
 export function OrdersList() {
     const { setTitle } = useHeaderTitle();
@@ -91,7 +90,13 @@ export function OrdersList() {
         setTitle('Orders');
     }, [setTitle]);
 
-    // Filter and sort orders
+    // Helper to get date string (YYYY-MM-DD) for grouping
+    const getDayKey = (dateString?: string) => {
+        if (!dateString) return '0000-00-00';
+        return dateString.split('T')[0];
+    };
+
+    // Filter and sort orders with day grouping
     const filteredOrders = orders
         .filter(order => {
             const term = searchTerm.toLowerCase();
@@ -122,8 +127,15 @@ export function OrdersList() {
             return matchesStatus;
         })
         .sort((a, b) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let aVal: any, bVal: any;
+            // 1. Group by day descending (latest day first)
+            const dayA = getDayKey(a.created_at);
+            const dayB = getDayKey(b.created_at);
+            if (dayA !== dayB) {
+                return dayB.localeCompare(dayA); // descending by day
+            }
+
+            // 2. Same day: apply user-selected sorting
+            let aVal, bVal;
             switch (sortBy) {
                 case 'created_at':
                     aVal = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -138,8 +150,8 @@ export function OrdersList() {
                     bVal = b.user?.name || '';
                     break;
                 case 'status':
-                    aVal = a.order_status;
-                    bVal = b.order_status;
+                    aVal = STATUS_PRIORITY[a.order_status] ?? 99;
+                    bVal = STATUS_PRIORITY[b.order_status] ?? 99;
                     break;
                 default:
                     return 0;
@@ -148,7 +160,9 @@ export function OrdersList() {
             if (typeof aVal === 'string' && typeof bVal === 'string') {
                 return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
             } else {
-                return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                const aNum = Number(aVal);
+                const bNum = Number(bVal);
+                return sortOrder === 'asc' ? aNum - bNum : bNum - aNum;
             }
         });
 
