@@ -1,4 +1,3 @@
-// pages/customer/Checkout.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -93,7 +92,7 @@ export default function Checkout() {
     // If cart becomes empty after removals, redirect
     if (items.length === 0) {
         return (
-            <div className="container mx-auto p-6 text-center">
+            <div className="container mx-auto p-4 sm:p-6 text-center">
                 <p className="text-gray-500 dark:text-gray-400">Your cart is empty.</p>
                 <button
                     onClick={() => navigate('/menuOrder')}
@@ -106,25 +105,23 @@ export default function Checkout() {
     }
 
     return (
-        <div className="container mx-auto p-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Checkout</h2>
+        <div className="container mx-auto p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">Checkout</h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 {/* Order items */}
                 <div className="lg:col-span-2">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Order Items</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Order Items</h3>
                         <div className="space-y-4">
                             {items.map((item) => (
-                                <div key={item.menuItemId} className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4">
-                                    {/* Left side: name and price */}
+                                <div key={item.menuItemId} className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center border-b border-gray-200 dark:border-gray-700 pb-4 gap-3">
                                     <div className="flex-1">
                                         <h4 className="font-medium text-gray-900 dark:text-white">{item.name}</h4>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">₱{item.price.toFixed(2)} each</p>
                                     </div>
 
-                                    {/* Quantity controls */}
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => updateQuantity(item.menuItemId, item.quantity - 1)}
                                             disabled={item.quantity <= 1}
@@ -141,12 +138,10 @@ export default function Checkout() {
                                         </button>
                                     </div>
 
-                                    {/* Item total */}
-                                    <span className="font-medium text-gray-900 dark:text-white mx-4">
-        ₱{(item.price * item.quantity).toFixed(2)}
-    </span>
+                                    <span className="font-medium text-gray-900 dark:text-white sm:mx-4">
+                                        ₱{(item.price * item.quantity).toFixed(2)}
+                                    </span>
 
-                                    {/* Delete button */}
                                     <button
                                         onClick={async () => {
                                             const confirmed = await showConfirmation(
@@ -159,7 +154,7 @@ export default function Checkout() {
                                                 removeItem(item.menuItemId);
                                             }
                                         }}
-                                        className="text-red-500 hover:text-red-700"
+                                        className="text-red-500 hover:text-red-700 self-end sm:self-center"
                                     >
                                         <i className="fas fa-trash" />
                                     </button>
@@ -169,10 +164,10 @@ export default function Checkout() {
                     </div>
                 </div>
 
-                {/* Order summary (unchanged) */}
+                {/* Order summary */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 sticky top-24">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Order Summary</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 lg:sticky lg:top-24">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Order Summary</h3>
                         <div className="space-y-3">
                             <div className="flex justify-between">
                                 <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
@@ -183,7 +178,7 @@ export default function Checkout() {
                                 <span className="font-medium text-gray-900 dark:text-white">₱0.00</span>
                             </div>
                             <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-                                <div className="flex justify-between font-bold text-lg">
+                                <div className="flex justify-between font-bold text-base sm:text-lg">
                                     <span className="text-green-600 dark:text-green-400">Total</span>
                                     <span className="text-green-600 dark:text-green-400">₱{totalAmount.toFixed(2)}</span>
                                 </div>

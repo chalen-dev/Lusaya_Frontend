@@ -1,4 +1,3 @@
-// pages/customer/menu_order/FoodChoices.tsx
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -66,7 +65,7 @@ export default function FoodChoices() {
         enabled: !!itemIds,
     });
 
-    // Compute items with stock directly (no state, no effect)
+    // Compute items with stock directly
     const itemsWithStock = useMemo<ItemWithStock[]>(() => {
         if (!filteredItems.length || !stockStatus) return [];
         const combined = filteredItems.map(item => ({
@@ -98,12 +97,12 @@ export default function FoodChoices() {
     if (menuLoading || stockLoading) return <LoadingScreen />;
 
     return (
-        <div className="container mx-auto p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="container mx-auto p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {itemsWithStock.map(({ item, inStock }) => (
                     <div
                         key={item.id}
-                        className={`bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200 dark:border-gray-700 ${
+                        className={`bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-shadow p-4 sm:p-6 border border-gray-200 dark:border-gray-700 flex flex-col ${
                             !inStock ? 'opacity-50' : ''
                         }`}
                     >
@@ -111,25 +110,25 @@ export default function FoodChoices() {
                             <img
                                 src={item.image_url}
                                 alt={item.name}
-                                className="w-full h-32 object-cover rounded-lg mb-3"
+                                className="w-full h-32 sm:h-36 object-cover rounded-lg mb-3"
                             />
                         )}
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
                             {item.name}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2">
                             {item.code}
                         </p>
-                        <p className="text-lg font-bold text-primary mb-3">
+                        <p className="text-base sm:text-lg font-bold text-primary mb-3">
                             ₱{Number(item.price).toFixed(2)}
                         </p>
                         {!inStock && (
-                            <p className="text-sm text-red-600 dark:text-red-400 mb-2">Out of Stock</p>
+                            <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 mb-2">Out of Stock</p>
                         )}
                         <button
                             onClick={() => handleAddToCart(item)}
                             disabled={!inStock}
-                            className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >
                             Add to Cart
                         </button>
@@ -143,11 +142,11 @@ export default function FoodChoices() {
                 </p>
             )}
 
-            {/* Quantity modal */}
+            {/* Quantity modal – responsive */}
             {showModal && selectedItem && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setShowModal(false)}>
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Add {selectedItem.name}</h3>
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Add {selectedItem.name}</h3>
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quantity</label>
                             <div className="flex items-center gap-2">
@@ -166,9 +165,9 @@ export default function FoodChoices() {
                                 </button>
                             </div>
                         </div>
-                        <div className="flex gap-3">
-                            <button onClick={() => setShowModal(false)} className="flex-1 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
-                            <button onClick={confirmAddToCart} className="flex-1 py-2 bg-primary text-white rounded hover:bg-primary-dark">Add to Cart</button>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button onClick={() => setShowModal(false)} className="w-full sm:flex-1 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Cancel</button>
+                            <button onClick={confirmAddToCart} className="w-full sm:flex-1 py-2 bg-primary text-white rounded hover:bg-primary-dark">Add to Cart</button>
                         </div>
                     </div>
                 </div>

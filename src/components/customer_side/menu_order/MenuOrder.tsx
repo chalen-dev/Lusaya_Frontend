@@ -1,4 +1,3 @@
-// pages/customer/MenuOrder.tsx
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -30,17 +29,17 @@ export default function MenuOrder() {
     if (isLoading) return <LoadingScreen />;
 
     return (
-        <div className="container mx-auto p-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Categories</h2>
+        <div className="container mx-auto p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-6">Categories</h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {categories.map((category) => (
                     <button
                         key={category.id}
                         onClick={() => handleCategoryClick(category.id)}
                         className="bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden border border-gray-200 dark:border-gray-700 text-left flex flex-col h-full"
                     >
-                        <div className="w-full h-48 bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                        <div className="w-full h-40 sm:h-48 bg-gray-100 dark:bg-gray-700 overflow-hidden">
                             <img
                                 src={category.image_url || '/placeholder-category.png'}
                                 alt={category.name}
@@ -51,7 +50,7 @@ export default function MenuOrder() {
                             />
                         </div>
                         <div className="p-4 flex-1 flex flex-col">
-                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
                                 {category.name}
                             </h3>
                             {category.description && (

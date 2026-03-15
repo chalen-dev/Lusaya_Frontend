@@ -1,4 +1,3 @@
-// components/common/Header.tsx
 import { useTheme } from '../../contexts/ThemeContext';
 import { useHeaderTitle } from '../../contexts/HeaderTitleContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +10,8 @@ type Props = {
     iconText?: string;
     showBackButton?: boolean;
     onBack?: () => void;
+    showMenuButton?: boolean;
+    onMenuClick?: () => void;
 };
 
 export const Header = ({
@@ -18,14 +19,25 @@ export const Header = ({
                            iconText = APP_INITIALS,
                            showBackButton = false,
                            onBack,
+                           showMenuButton = false,
+                           onMenuClick,
                        }: Props) => {
     const { theme, toggleTheme } = useTheme();
     const { title } = useHeaderTitle();
     const { user } = useAuth();
 
     return (
-        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 px-6 sm:px-8 py-3 flex justify-between items-center h-[70px] sticky top-0 z-30 shadow-sm">
+        <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center h-[70px] sticky top-0 z-30 shadow-sm">
             <div className={`flex items-center ${includeIcon ? 'space-x-2' : ''}`}>
+                {showMenuButton && (
+                    <button
+                        onClick={onMenuClick}
+                        className="lg:hidden mr-2 p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        aria-label="Open menu"
+                    >
+                        <i className="fas fa-bars text-xl" />
+                    </button>
+                )}
                 {showBackButton && (
                     <button
                         onClick={onBack}
@@ -36,7 +48,7 @@ export const Header = ({
                     </button>
                 )}
                 {includeIcon && <Icon text={iconText} size={1} />}
-                <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+                <h1 className="text-lg sm:text-xl font-semibold tracking-tight">{title}</h1>
             </div>
             <div className="flex items-center gap-2">
                 {user && <NotificationButton />}

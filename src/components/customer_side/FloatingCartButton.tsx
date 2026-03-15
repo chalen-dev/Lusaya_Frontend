@@ -1,4 +1,3 @@
-// components/customer_size/FloatingCartButton.tsx
 import { useState } from 'react';
 import {useCart} from "../../contexts/CartContext.tsx";
 import CartModal from "./CartModal.tsx";
@@ -6,8 +5,6 @@ import CartModal from "./CartModal.tsx";
 export default function FloatingCartButton() {
     const { totalItems } = useCart();
     const [isOpen, setIsOpen] = useState(false);
-
-    //if (totalItems === 0) return null; // optionally hide when empty
 
     return (
         <>
