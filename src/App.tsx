@@ -1,6 +1,6 @@
 import './App.css'
 import {BrowserRouter, Route, Routes} from "react-router-dom";
-import {Login} from "./components/auth/Login.tsx";
+import {LoginCustomer} from "./components/auth/LoginCustomer.tsx";
 import {Dashboard} from "./components/dashboard/Dashboard.tsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.tsx";
 import {AuthLayout} from "./components/AuthLayout.tsx";
@@ -11,6 +11,7 @@ import POSInterface from "./components/pos/POSInterface.tsx";
 import {OrdersList} from "./components/orders/OrdersList.tsx";
 import {MenuList} from "./components/menu/MenuList.tsx";
 import {InventoryList} from "./components/inventory/InventoryList.tsx";
+import {LoginStaff} from "./components/auth/LoginStaff.tsx";
 
 
 function App() {
@@ -18,9 +19,10 @@ function App() {
         <BrowserRouter>
             <Routes>
                 <Route element={<GuestLayout />}>
-                    <Route path="/" element={<Login />} />
+                    <Route path="/loginStaff" element={<LoginCustomer />} />
+                    <Route path="/" element={<LoginStaff />} />
                     <Route path="/unauthorized" element={<Unauthorized />} />
-                    <Route path="*" element={<Login />}/>
+                    <Route path="*" element={<LoginCustomer />}/>
                 </Route>
 
                 <Route element={<ProtectedRoute />}>

@@ -1,9 +1,9 @@
+// pages/menu/MenuList.tsx
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
-import { MenuItemCard } from "./partials/MenuItemCard.tsx";
 import type { Category, EditingMenuItem, MenuItem } from "./menuTypes.ts";
 import { FetchingDetails } from "../common/loading/FetchingDetails.tsx";
 import { MenuForm } from "./forms/MenuForm.tsx";
@@ -13,7 +13,8 @@ import { showConfirmation, showToast } from '../../utils/swalHelpers';
 import { Pagination } from "../common/Pagination.tsx";
 import { MenuItemShowModal } from "./partials/MenuItemShowModal.tsx";
 import { TabBar } from "../common/TabBar.tsx";
-import { type Column, TableHeader } from "../common/TableHeader.tsx";
+import { TableHeader, type Column } from "../common/TableHeader.tsx";
+import { MenuItemRow } from "./partials/MenuItemRow.tsx";
 
 export function MenuList() {
     const { setTitle } = useHeaderTitle();
@@ -42,7 +43,7 @@ export function MenuList() {
     });
 
     const tabBarRef = useRef<HTMLDivElement>(null);
-    const [headerTopOffset, setHeaderTopOffset] = useState(160);
+
     const [activeTab, setActiveTab] = useState<'forms' | 'search' | 'select'>('forms');
     const [contentExpanded, setContentExpanded] = useState(false);
     const [editingItem, setEditingItem] = useState<EditingMenuItem | null>(null);
@@ -67,18 +68,6 @@ export function MenuList() {
     useEffect(() => {
         setTitle('Menu List');
     }, [setTitle]);
-
-    // ResizeObserver for sticky header
-    useEffect(() => {
-        if (!tabBarRef.current) return;
-        const observer = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                setHeaderTopOffset(50 + entry.contentRect.height);
-            }
-        });
-        observer.observe(tabBarRef.current);
-        return () => observer.disconnect();
-    }, []);
 
     // Filtering and sorting (client-side)
     const filteredMenuItems = menuItems
@@ -312,36 +301,39 @@ export function MenuList() {
                 )}
             </div>
 
-            {/* Table Header */}
-            {menuItems.length > 0 && (
-                <TableHeader
-                    columns={menuColumns}
-                    selectionMode={selectionMode}
-                    className="sticky z-10"
-                    style={{ top: `${headerTopOffset}px` }}
-                />
-            )}
-
-            {/* Menu items grid */}
-            <div className="cards-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem' }}>
-                {paginatedItems.map(item => (
-                    <MenuItemCard
-                        key={item.id}
-                        item={item}
-                        onDelete={handleDelete}
-                        onEdit={handleEdit}
-                        onView={handleViewItem}
-                        selectionMode={selectionMode}
-                        isSelected={selectedIds.has(item.id)}
-                        onToggleSelection={handleToggleItemSelection}
-                    />
-                ))}
-                {paginatedItems.length === 0 && !isLoading && (
-                    <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
-                        No items match your search/filters.
-                    </div>
-                )}
+            {/* Table */}
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    {filteredMenuItems.length > 0 && (
+                        <TableHeader
+                            columns={menuColumns}
+                            selectionMode={selectionMode}
+                            // No sticky classes or top style
+                        />
+                    )}
+                    <tbody>
+                    {paginatedItems.map(item => (
+                        <MenuItemRow
+                            key={item.id}
+                            item={item}
+                            onDelete={handleDelete}
+                            onEdit={handleEdit}
+                            onView={handleViewItem}
+                            selectionMode={selectionMode}
+                            isSelected={selectedIds.has(item.id)}
+                            onToggleSelection={handleToggleItemSelection}
+                        />
+                    ))}
+                    </tbody>
+                </table>
             </div>
+
+            {/* Empty state */}
+            {filteredMenuItems.length === 0 && (
+                <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
+                    No items match your search/filters.
+                </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

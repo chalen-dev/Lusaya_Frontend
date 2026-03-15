@@ -7,13 +7,14 @@ import { useHeaderTitle } from '../../contexts/HeaderTitleContext';
 import { FetchingDetails } from '../common/loading/FetchingDetails';
 import { Pagination } from '../common/Pagination';
 import { TabBar } from '../common/TabBar';
+import { TableHeader, type Column } from '../common/TableHeader';
 import { showToast, showConfirmation } from '../../utils/swalHelpers';
 import { OrderForm } from './forms/OrderForm';
 import { OrderSearchForm } from './forms/OrderSearchForm';
 import type { Order, User, OrderStatus } from './orderTypes';
 import type { InventoryLog } from '../inventory/inventoryTypes';
 import { OrderActionForm } from "./forms/OrderActionForm";
-import { OrderCard } from "./partials/order_card/OrderCard";
+import {OrderRow} from "./partials/OrderRow.tsx";
 
 export function OrdersList() {
     const { setTitle } = useHeaderTitle();
@@ -79,6 +80,9 @@ export function OrdersList() {
     const [sortBy, setSortBy] = useState<'created_at' | 'total_amount' | 'customer_name' | 'status'>('created_at');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // newest first by default
 
+    // Expanded row state
+    const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+
     // Pagination (client-side)
     const [page, setPage] = useState(1);
     const perPage = 10;
@@ -86,14 +90,6 @@ export function OrdersList() {
     useEffect(() => {
         setTitle('Orders');
     }, [setTitle]);
-
-    // ResizeObserver for sticky header (kept for future table header)
-    useEffect(() => {
-        if (!tabBarRef.current) return;
-        const observer = new ResizeObserver(() => {});
-        observer.observe(tabBarRef.current);
-        return () => observer.disconnect();
-    }, []);
 
     // Filter and sort orders
     const filteredOrders = orders
@@ -181,7 +177,6 @@ export function OrdersList() {
         },
     });
 
-    // Bulk delete mutation (placeholder – not implemented in backend yet)
     const bulkDeleteMutation = useMutation({
         mutationFn: (ids: number[]) => api.post('/orders/bulk-delete', { ids }),
         onSuccess: (_data, ids) => {
@@ -198,7 +193,6 @@ export function OrdersList() {
         },
     });
 
-    // Status update mutation – using the dedicated endpoint
     const statusUpdateMutation = useMutation({
         mutationFn: ({ id, status }: { id: number; status: string }) =>
             api.patch(`/orders/${id}/status`, { order_status: status }),
@@ -285,6 +279,18 @@ export function OrdersList() {
     if (isLoading) return <FetchingDetails />;
     if (queryError) return <div className="p-4 text-red-600 dark:text-red-400">Error: {(queryError as Error).message}</div>;
 
+    const orderColumns: Column[] = [
+        { key: 'id', label: 'ID', width: selectionMode ? 'w-20' : 'w-16' },
+        { key: 'customer', label: 'Customer', width: 'flex-1' },
+        { key: 'status', label: 'Status', width: 'w-24', align: 'center' },
+        { key: 'total', label: 'Total', width: 'w-28', align: 'right' },
+        { key: 'items', label: 'Items', width: 'w-20', align: 'center' },
+        { key: 'created', label: 'Created', width: 'w-28', align: 'center' },
+        { key: 'updated', label: 'Updated', width: 'w-28', align: 'center' },
+        { key: 'actions', label: 'Actions', width: 'w-40', align: 'right' },
+        { key: 'expand', label: '', width: 'w-8', align: 'center' },
+    ];
+
     return (
         <div className="orders-list-container">
             {/* Sticky top bar with tabs */}
@@ -360,27 +366,42 @@ export function OrdersList() {
                 )}
             </div>
 
-            {/* Orders grid */}
-            <div className="cards-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem' }}>
-                {paginatedOrders.map(order => (
-                    <OrderCard
-                        key={order.id}
-                        order={order}
-                        onDelete={handleDelete}
-                        onEdit={handleEdit}
-                        onView={handleView}
-                        onStatusChange={handleStatusChange}
-                        selectionMode={selectionMode}
-                        isSelected={selectedIds.has(order.id)}
-                        onToggleSelection={handleToggleItemSelection}
-                    />
-                ))}
-                {filteredOrders.length === 0 && (
-                    <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
-                        No orders match your filters.
-                    </div>
-                )}
+            {/* Table */}
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    {filteredOrders.length > 0 && (
+                        <TableHeader
+                            columns={orderColumns}
+                            selectionMode={selectionMode}
+                            className="sticky z-10"
+                        />
+                    )}
+                    <tbody>
+                    {paginatedOrders.map(order => (
+                        <OrderRow
+                            key={order.id}
+                            order={order}
+                            onDelete={handleDelete}
+                            onEdit={handleEdit}
+                            onView={handleView}
+                            onStatusChange={handleStatusChange}
+                            selectionMode={selectionMode}
+                            isSelected={selectedIds.has(order.id)}
+                            onToggleSelection={handleToggleItemSelection}
+                            expanded={expandedOrderId === order.id}
+                            onExpandToggle={(id) => setExpandedOrderId(expandedOrderId === id ? null : id)}
+                        />
+                    ))}
+                    </tbody>
+                </table>
             </div>
+
+            {/* Empty state */}
+            {filteredOrders.length === 0 && (
+                <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
+                    No orders match your filters.
+                </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (

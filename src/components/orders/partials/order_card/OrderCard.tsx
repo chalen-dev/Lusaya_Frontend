@@ -103,9 +103,10 @@ export function OrderCard({
         ? 'bg-blue-100 dark:bg-blue-900/50 border-2 border-primary'
         : '';
 
-    const formatDate = (dateString?: string) => {
+    const formatDateTime = (dateString?: string) => {
         if (!dateString) return '—';
-        return new Date(dateString).toLocaleDateString();
+        const date = new Date(dateString);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     const customerName = order.user?.name || `User #${order.user_id}`;
@@ -135,30 +136,44 @@ export function OrderCard({
                     </div>
                 )}
 
+                {/* ID */}
                 <div className={`${selectionMode ? 'w-20' : 'w-16'} text-gray-500 dark:text-gray-400 font-mono`}>
                     #{order.id}
                 </div>
 
+                {/* Customer */}
                 <div className="flex-1 font-medium text-gray-900 dark:text-gray-100 truncate">
                     {customerName}
                 </div>
 
+                {/* Status Badge */}
                 <div className="w-24 flex justify-center">
                     {getStatusBadge()}
                 </div>
 
+                {/* Total Amount */}
                 <div className="w-28 text-gray-900 dark:text-gray-100 font-semibold text-right">
                     ₱{totalAmount.toFixed(2)}
                 </div>
 
+                {/* Items Count */}
                 <div className="w-20 text-gray-600 dark:text-gray-300 text-center">
                     {itemCount} {itemCount === 1 ? 'item' : 'items'}
                 </div>
 
-                <div className="w-28 text-gray-600 dark:text-gray-300 text-center">
-                    {formatDate(order.created_at)}
+                {/* Created At */}
+                <div className="w-28 text-gray-600 dark:text-gray-300 text-center text-xs">
+                    {formatDateTime(order.created_at)}
                 </div>
 
+                {/* Updated At */}
+                <div className="w-28 text-gray-600 dark:text-gray-300 text-center text-xs">
+                    {order.updated_at && order.updated_at !== order.created_at
+                        ? formatDateTime(order.updated_at)
+                        : '—'}
+                </div>
+
+                {/* Actions */}
                 <div className="w-40 flex gap-2 justify-end">
                     <button
                         onClick={handleEdit}
@@ -176,6 +191,7 @@ export function OrderCard({
                     </button>
                 </div>
 
+                {/* Expand/collapse toggle */}
                 <button
                     onClick={handleExpandToggle}
                     disabled={selectionMode}

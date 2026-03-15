@@ -1,25 +1,36 @@
 import { useTheme } from '../../contexts/ThemeContext';
 import { useHeaderTitle } from '../../contexts/HeaderTitleContext';
 import { Icon } from "./Icon.tsx";
-import {APP_INITIALS} from "../../utils/constants.ts";
+import { APP_INITIALS } from "../../utils/constants.ts";
 
 type Props = {
     includeIcon?: boolean;
     iconText?: string;
+    showBackButton?: boolean;
+    onBack?: () => void;
 };
 
-export const Header =
-    ({
-         includeIcon = false,
-         iconText = APP_INITIALS
-    }: Props) => {
+export const Header = ({
+                           includeIcon = false,
+                           iconText = APP_INITIALS,
+                           showBackButton = false,
+                           onBack,
+                       }: Props) => {
     const { theme, toggleTheme } = useTheme();
     const { title } = useHeaderTitle();
-
 
     return (
         <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-gray-800 px-6 sm:px-8 py-3 flex justify-between items-center h-[70px] sticky top-0 z-10 shadow-sm">
             <div className={`flex items-center ${includeIcon ? 'space-x-2' : ''}`}>
+                {showBackButton && (
+                    <button
+                        onClick={onBack}
+                        className="mr-3 p-1.5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        aria-label="Go back"
+                    >
+                        <i className="fas fa-arrow-left text-lg" />
+                    </button>
+                )}
                 {includeIcon && <Icon text={iconText} size={1} />}
                 <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
             </div>

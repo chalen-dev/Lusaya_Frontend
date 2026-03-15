@@ -1,9 +1,9 @@
+// pages/inventory/InventoryList.tsx
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../services/api';
 import axios from 'axios';
 import { useHeaderTitle } from "../../contexts/HeaderTitleContext.tsx";
-import { InventoryCard } from "./partials/InventoryCard";
 import { InventoryForm } from "./forms/InventoryForm";
 import { InventorySearchForm } from "./forms/InventorySearchForm";
 import { InventoryActionForm } from "./forms/InventoryActionForm";
@@ -12,10 +12,10 @@ import { FetchingDetails } from "../common/loading/FetchingDetails";
 import { Pagination } from "../common/Pagination";
 import { showToast, showConfirmation } from '../../utils/swalHelpers';
 import { TabBar } from "../common/TabBar";
-import { type Column, TableHeader } from "../common/TableHeader";
+import { TableHeader, type Column } from "../common/TableHeader";
+import { InventoryRow } from "./partials/InventoryRow";
 import type {ArchiveFilter, AvailabilityFilter, InventoryLog, MenuItem, SortField, SortOrder} from "./inventoryTypes";
 import {getEffectiveStatus} from "./inventoryUtils.ts";
-
 
 export function InventoryList() {
     const { setTitle } = useHeaderTitle();
@@ -46,8 +46,6 @@ export function InventoryList() {
         },
     });
 
-    const [headerTopOffset, setHeaderTopOffset] = useState(160);
-
     // UI state for sticky top bar
     const [activeTab, setActiveTab] = useState<'forms' | 'search' | 'select'>('forms');
     const [contentExpanded, setContentExpanded] = useState(false);
@@ -75,18 +73,6 @@ export function InventoryList() {
         setTitle('Inventory List');
     }, [setTitle]);
 
-    // ResizeObserver for sticky header
-    useEffect(() => {
-        if (!tabBarRef.current) return;
-        const observer = new ResizeObserver(entries => {
-            for (const entry of entries) {
-                setHeaderTopOffset(50 + entry.contentRect.height);
-            }
-        });
-        observer.observe(tabBarRef.current);
-        return () => observer.disconnect();
-    }, []);
-
     // Filtered and sorted logs
     const filteredLogs = inventoryLogs
         .filter(log => {
@@ -103,7 +89,6 @@ export function InventoryList() {
                 (availabilityFilter === 'available' && log.is_available) ||
                 (availabilityFilter === 'unavailable' && !log.is_available);
 
-            // New archive filter
             const matchesArchive =
                 archiveFilter === 'all' ||
                 (archiveFilter === 'archived' && log.is_archived) ||
@@ -433,7 +418,7 @@ export function InventoryList() {
 
     return (
         <div className="inventory-list-container">
-            {/* Sticky top bar with tabs */}
+            {/* Sticky top bar with tabs (unchanged) */}
             <div
                 ref={tabBarRef}
                 className={`bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 mb-8 sticky top-[50px] z-20 ${
@@ -497,38 +482,41 @@ export function InventoryList() {
                 )}
             </div>
 
-            {/* Header row – using filteredLogs */}
-            {filteredLogs.length > 0 && (
-                <TableHeader
-                    columns={inventoryColumns}
-                    selectionMode={selectionMode}
-                    className="sticky z-10"
-                    style={{ top: `${headerTopOffset}px` }}
-                />
-            )}
-
-            {/* Inventory logs grid – using paginatedItems */}
-            <div className="cards-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.1rem' }}>
-                {paginatedItems.map(log => (
-                    <InventoryCard
-                        key={log.id}
-                        log={log}
-                        onDelete={handleDelete}
-                        onEdit={handleEdit}
-                        onView={handleView}
-                        onToggleAvailability={handleToggleAvailability}
-                        selectionMode={selectionMode}
-                        isSelected={selectedIds.has(log.id)}
-                        onToggleSelection={handleToggleItemSelection}
-                        onUpdateQuantity={handleUpdateQuantity}
-                    />
-                ))}
-                {filteredLogs.length === 0 && !isLoading && (
-                    <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
-                        No inventory records match your filters.
-                    </div>
-                )}
+            {/* Table View */}
+            <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                    {filteredLogs.length > 0 && (
+                        <TableHeader
+                            columns={inventoryColumns}
+                            selectionMode={selectionMode}
+                            // No sticky classes – scrolls normally
+                        />
+                    )}
+                    <tbody>
+                    {paginatedItems.map(log => (
+                        <InventoryRow
+                            key={log.id}
+                            log={log}
+                            onDelete={handleDelete}
+                            onEdit={handleEdit}
+                            onView={handleView}
+                            onToggleAvailability={handleToggleAvailability}
+                            onUpdateQuantity={handleUpdateQuantity}
+                            selectionMode={selectionMode}
+                            isSelected={selectedIds.has(log.id)}
+                            onToggleSelection={handleToggleItemSelection}
+                        />
+                    ))}
+                    </tbody>
+                </table>
             </div>
+
+            {/* Empty state */}
+            {filteredLogs.length === 0 && !isLoading && (
+                <div className="w-full text-center py-8 text-gray-500 dark:text-gray-400">
+                    No inventory records match your filters.
+                </div>
+            )}
 
             {/* Pagination controls */}
             {totalPages > 1 && (
@@ -550,4 +538,3 @@ export function InventoryList() {
         </div>
     );
 }
-

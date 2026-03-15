@@ -1,5 +1,5 @@
-import api from './api';
-import type {LoginCredentials, LoginResponse, User} from '../components/auth/authTypes.ts';
+import api from '../../services/api.ts';
+import type {LoginCredentials, LoginResponse, User} from './authTypes.ts';
 
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
     const response = await api.post<LoginResponse>('/login', credentials);
